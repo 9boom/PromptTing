@@ -28,70 +28,6 @@
       width: 100vw;
     }
 
-    .map-ui {
-      position: fixed;
-      z-index: 1000;
-      left: 12px;
-      top: 12px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      max-width: calc(100vw - 24px);
-    }
-
-    .map-ui button {
-      appearance: none;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: rgba(20, 24, 38, 0.86);
-      color: #fff;
-      border-radius: 12px;
-      padding: 10px 12px;
-      font-size: 14px;
-      line-height: 1;
-      cursor: pointer;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
-
-    .map-ui button[aria-pressed="true"] {
-      border-color: rgba(95, 255, 185, 0.5);
-      box-shadow: 0 0 0 3px rgba(95, 255, 185, 0.14);
-    }
-
-    .map-ui .status {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background: rgba(20, 24, 38, 0.86);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      font-size: 13px;
-      line-height: 1.2;
-      max-width: min(520px, calc(100vw - 24px));
-    }
-
-    .status .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: #ffd166;
-      box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.18);
-      flex: 0 0 auto;
-    }
-
-    .status[data-state="ok"] .dot {
-      background: #5fffb9;
-      box-shadow: 0 0 0 3px rgba(95, 255, 185, 0.18);
-    }
-
-    .status[data-state="err"] .dot {
-      background: #ff5f7a;
-      box-shadow: 0 0 0 3px rgba(255, 95, 122, 0.18);
-    }
-
     .user-arrow {
       width: 18px;
       height: 18px;
@@ -116,16 +52,6 @@
 
 </head>
 <body>
-  <div class="map-ui" role="group" aria-label="Map controls">
-    <button id="btnLocate" type="button">GPS: ขอสิทธิ์</button>
-    <button id="btnFollow" type="button" aria-pressed="true">ติดตามตำแหน่ง: เปิด</button>
-    <button id="btnCompass" type="button" aria-pressed="false">เข็มทิศหมุนแผนที่: ปิด</button>
-    <div id="status" class="status" data-state="idle">
-      <span class="dot" aria-hidden="true"></span>
-      <span id="statusText">พร้อมใช้งาน</span>
-    </div>
-  </div>
-
   <div id="map" aria-label="Map"></div>
 
   <script
@@ -158,17 +84,7 @@
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
 
-  // --- Leaflet map (responsive, GPS, marker, compass rotation) ---
-  const statusEl = document.getElementById("status");
-  const statusTextEl = document.getElementById("statusText");
-  const btnLocate = document.getElementById("btnLocate");
-  const btnFollow = document.getElementById("btnFollow");
-  const btnCompass = document.getElementById("btnCompass");
-
-  const setStatus = (state, text) => {
-    statusEl.dataset.state = state;
-    statusTextEl.textContent = text;
-  };
+  // --- Leaflet map (responsive, GPS lock, marker, compass->flyby rotation) ---
 
   const map = L.map("map", {
     rotate: true,
@@ -198,15 +114,11 @@
     fillOpacity: 0.10,
   }).addTo(map);
 
-  let follow = true;
   let watchId = null;
-  let compassEnabled = false;
+  let compassEnabled = false; // true when we have real heading source
   let lastHeading = null;
-
-  const setPressed = (btn, pressed, onLabel, offLabel) => {
-    btn.setAttribute("aria-pressed", pressed ? "true" : "false");
-    btn.textContent = pressed ? onLabel : offLabel;
-  };
+  let flybyRaf = null;
+  let flybyStartTs = null;
 
   const normalizeDeg = (deg) => ((deg % 360) + 360) % 360;
 
@@ -219,16 +131,33 @@
     if (typeof map.setBearing === "function") map.setBearing(normalizeDeg(bearingDeg));
   };
 
+  const stopFlyby = () => {
+    if (flybyRaf != null) cancelAnimationFrame(flybyRaf);
+    flybyRaf = null;
+    flybyStartTs = null;
+  };
+
+  const startFlyby = () => {
+    // "flyby" fallback when no compass: rotate camera continuously
+    if (typeof map.setBearing !== "function") return;
+    stopFlyby();
+    const baseBearing = normalizeDeg(map.getBearing?.() ?? 0);
+    flybyStartTs = null;
+
+    const speedDegPerSec = 12; // gentle rotation
+    const tick = (ts) => {
+      if (flybyStartTs == null) flybyStartTs = ts;
+      const elapsedSec = (ts - flybyStartTs) / 1000;
+      setMapBearing(baseBearing + elapsedSec * speedDegPerSec);
+      flybyRaf = requestAnimationFrame(tick);
+    };
+    flybyRaf = requestAnimationFrame(tick);
+  };
+
   const startGps = () => {
-    if (!("geolocation" in navigator)) {
-      setStatus("err", "อุปกรณ์/เบราว์เซอร์นี้ไม่รองรับ GPS");
-      return;
-    }
+    if (!("geolocation" in navigator)) return;
 
     if (watchId != null) return;
-
-    setStatus("idle", "กำลังขอข้อมูลตำแหน่ง… (ต้องใช้ HTTPS เพื่อให้ GPS/เข็มทิศทำงาน)");
-    btnLocate.textContent = "GPS: กำลังติดตาม…";
 
     watchId = navigator.geolocation.watchPosition(
       (pos) => {
@@ -239,9 +168,8 @@
         accuracyCircle.setLatLng(latlng);
         if (Number.isFinite(accuracy)) accuracyCircle.setRadius(accuracy);
 
-        if (follow) map.setView(latlng, Math.max(map.getZoom(), 17), { animate: true });
-
-        setStatus("ok", `GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} ±${Math.round(accuracy || 0)}m`);
+        // lock camera to user; keep zoom user-selected
+        map.setView(latlng, map.getZoom(), { animate: true });
 
         if (Number.isFinite(heading)) {
           lastHeading = heading;
@@ -250,13 +178,6 @@
         }
       },
       (err) => {
-        const msg =
-          err.code === err.PERMISSION_DENIED ? "ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง" :
-          err.code === err.POSITION_UNAVAILABLE ? "ไม่พบสัญญาณตำแหน่ง" :
-          err.code === err.TIMEOUT ? "ขอข้อมูลตำแหน่งนานเกินไป" :
-          "เกิดข้อผิดพลาดจาก GPS";
-        setStatus("err", `${msg} (code ${err.code})`);
-        btnLocate.textContent = "GPS: ขอสิทธิ์";
         if (watchId != null) {
           navigator.geolocation.clearWatch(watchId);
           watchId = null;
@@ -274,8 +195,6 @@
     if (watchId == null) return;
     navigator.geolocation.clearWatch(watchId);
     watchId = null;
-    btnLocate.textContent = "GPS: ขอสิทธิ์";
-    setStatus("idle", "หยุดติดตามตำแหน่งแล้ว");
   };
 
   const onDeviceOrientation = (event) => {
@@ -302,14 +221,13 @@
     if (map?.compassBearing?.enable) {
       map.compassBearing.enable();
       compassEnabled = true;
-      setPressed(btnCompass, true, "เข็มทิศหมุนแผนที่: เปิด", "เข็มทิศหมุนแผนที่: ปิด");
-      setStatus("ok", "เข็มทิศ: เปิดแล้ว");
+      stopFlyby();
       return;
     }
 
     const canListen = "DeviceOrientationEvent" in window;
     if (!canListen) {
-      setStatus("err", "อุปกรณ์/เบราว์เซอร์นี้ไม่รองรับเข็มทิศ");
+      compassEnabled = false;
       return;
     }
 
@@ -318,11 +236,11 @@
       try {
         const res = await DeviceOrientationEvent.requestPermission();
         if (res !== "granted") {
-          setStatus("err", "ไม่ได้รับอนุญาตให้ใช้เข็มทิศ");
+          compassEnabled = false;
           return;
         }
       } catch {
-        setStatus("err", "ขอสิทธิ์เข็มทิศไม่สำเร็จ");
+        compassEnabled = false;
         return;
       }
     }
@@ -331,9 +249,8 @@
     window.addEventListener("deviceorientation", onDeviceOrientation, true);
 
     compassEnabled = true;
-    setPressed(btnCompass, true, "เข็มทิศหมุนแผนที่: เปิด", "เข็มทิศหมุนแผนที่: ปิด");
     if (lastHeading != null) setMapBearing(lastHeading);
-    setStatus("ok", "เข็มทิศ: เปิดแล้ว");
+    stopFlyby();
   };
 
   const stopCompass = () => {
@@ -341,40 +258,13 @@
     window.removeEventListener("deviceorientationabsolute", onDeviceOrientation, true);
     window.removeEventListener("deviceorientation", onDeviceOrientation, true);
     compassEnabled = false;
-    setPressed(btnCompass, false, "เข็มทิศหมุนแผนที่: เปิด", "เข็มทิศหมุนแผนที่: ปิด");
-    setMapBearing(0);
-    setStatus("idle", "เข็มทิศ: ปิดแล้ว (รีเซ็ตทิศเหนือ)");
   };
 
-  btnLocate.addEventListener("click", () => {
-    if (watchId == null) startGps();
-    else stopGps();
-  });
-
-  btnFollow.addEventListener("click", () => {
-    follow = !follow;
-    setPressed(btnFollow, follow, "ติดตามตำแหน่ง: เปิด", "ติดตามตำแหน่ง: ปิด");
-    if (follow) {
-      const ll = userMarker.getLatLng();
-      map.setView([ll.lat, ll.lng], Math.max(map.getZoom(), 17), { animate: true });
-    }
-  });
-
-  btnCompass.addEventListener("click", async () => {
-    if (!compassEnabled) await startCompass();
-    else stopCompass();
-  });
-
-  // Keep follow off if user drags the map
-  map.on("dragstart", () => {
-    if (!follow) return;
-    follow = false;
-    setPressed(btnFollow, false, "ติดตามตำแหน่ง: เปิด", "ติดตามตำแหน่ง: ปิด");
-  });
-
-  setPressed(btnFollow, true, "ติดตามตำแหน่ง: เปิด", "ติดตามตำแหน่ง: ปิด");
-  setPressed(btnCompass, false, "เข็มทิศหมุนแผนที่: เปิด", "เข็มทิศหมุนแผนที่: ปิด");
-  setStatus("idle", "แตะ “GPS: ขอสิทธิ์” เพื่อเริ่มใช้งานตำแหน่ง");
+  // Autostart: ask GPS permission (browser popup), lock camera, enable compass if supported,
+  // otherwise fallback to flyby camera rotation.
+  startGps();
+  await startCompass();
+  if (!compassEnabled) startFlyby();
   </script>
 
 </body>
