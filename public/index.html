@@ -7,12 +7,135 @@
   <link rel="shortcut icon" href="favicon.png" type="image/png">
   <link rel="manifest" href="manifest.json">
 
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
   <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #0b1020;
+      color: #e7e9ee;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    #map {
+      height: 100vh;
+      width: 100vw;
+    }
+
+    .map-ui {
+      position: fixed;
+      z-index: 1000;
+      left: 12px;
+      top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: calc(100vw - 24px);
+    }
+
+    .map-ui button {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(20, 24, 38, 0.86);
+      color: #fff;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .map-ui button[aria-pressed="true"] {
+      border-color: rgba(95, 255, 185, 0.5);
+      box-shadow: 0 0 0 3px rgba(95, 255, 185, 0.14);
+    }
+
+    .map-ui .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(20, 24, 38, 0.86);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      font-size: 13px;
+      line-height: 1.2;
+      max-width: min(520px, calc(100vw - 24px));
+    }
+
+    .status .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #ffd166;
+      box-shadow: 0 0 0 3px rgba(255, 209, 102, 0.18);
+      flex: 0 0 auto;
+    }
+
+    .status[data-state="ok"] .dot {
+      background: #5fffb9;
+      box-shadow: 0 0 0 3px rgba(95, 255, 185, 0.18);
+    }
+
+    .status[data-state="err"] .dot {
+      background: #ff5f7a;
+      box-shadow: 0 0 0 3px rgba(255, 95, 122, 0.18);
+    }
+
+    .user-arrow {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.25);
+      display: grid;
+      place-items: center;
+      transform-origin: center;
+    }
+
+    .user-arrow::before {
+      content: "";
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-bottom: 10px solid #2ee4ff;
+      transform: translateY(-1px);
+      filter: drop-shadow(0 2px 6px rgba(46, 228, 255, 0.35));
+    }
   </style>
 
 </head>
 <body>
-<script type="module">
+  <div class="map-ui" role="group" aria-label="Map controls">
+    <button id="btnLocate" type="button">GPS: ขอสิทธิ์</button>
+    <button id="btnFollow" type="button" aria-pressed="true">ติดตามตำแหน่ง: เปิด</button>
+    <button id="btnCompass" type="button" aria-pressed="false">เข็มทิศหมุนแผนที่: ปิด</button>
+    <div id="status" class="status" data-state="idle">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="statusText">พร้อมใช้งาน</span>
+    </div>
+  </div>
+
+  <div id="map" aria-label="Map"></div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
+
+  <script type="module">
   // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
@@ -34,8 +157,225 @@
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
-</script>
-</script>
+
+  // --- Leaflet map (responsive, GPS, marker, compass rotation) ---
+  const statusEl = document.getElementById("status");
+  const statusTextEl = document.getElementById("statusText");
+  const btnLocate = document.getElementById("btnLocate");
+  const btnFollow = document.getElementById("btnFollow");
+  const btnCompass = document.getElementById("btnCompass");
+
+  const setStatus = (state, text) => {
+    statusEl.dataset.state = state;
+    statusTextEl.textContent = text;
+  };
+
+  const map = L.map("map", {
+    rotate: true,
+    bearing: 0,
+    zoomControl: true,
+  }).setView([13.7563, 100.5018], 13);
+
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(map);
+
+  const userIcon = L.divIcon({
+    className: "",
+    html: `<div class="user-arrow" id="userArrow"></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+
+  const userMarker = L.marker(map.getCenter(), { icon: userIcon }).addTo(map);
+  const accuracyCircle = L.circle(map.getCenter(), {
+    radius: 0,
+    color: "#2ee4ff",
+    weight: 1,
+    opacity: 0.9,
+    fillColor: "#2ee4ff",
+    fillOpacity: 0.10,
+  }).addTo(map);
+
+  let follow = true;
+  let watchId = null;
+  let compassEnabled = false;
+  let lastHeading = null;
+
+  const setPressed = (btn, pressed, onLabel, offLabel) => {
+    btn.setAttribute("aria-pressed", pressed ? "true" : "false");
+    btn.textContent = pressed ? onLabel : offLabel;
+  };
+
+  const normalizeDeg = (deg) => ((deg % 360) + 360) % 360;
+
+  const applyHeadingToUI = (headingDeg) => {
+    const arrow = document.getElementById("userArrow");
+    if (arrow) arrow.style.transform = `rotate(${headingDeg}deg)`;
+  };
+
+  const setMapBearing = (bearingDeg) => {
+    if (typeof map.setBearing === "function") map.setBearing(normalizeDeg(bearingDeg));
+  };
+
+  const startGps = () => {
+    if (!("geolocation" in navigator)) {
+      setStatus("err", "อุปกรณ์/เบราว์เซอร์นี้ไม่รองรับ GPS");
+      return;
+    }
+
+    if (watchId != null) return;
+
+    setStatus("idle", "กำลังขอข้อมูลตำแหน่ง… (ต้องใช้ HTTPS เพื่อให้ GPS/เข็มทิศทำงาน)");
+    btnLocate.textContent = "GPS: กำลังติดตาม…";
+
+    watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy, heading } = pos.coords;
+        const latlng = [latitude, longitude];
+
+        userMarker.setLatLng(latlng);
+        accuracyCircle.setLatLng(latlng);
+        if (Number.isFinite(accuracy)) accuracyCircle.setRadius(accuracy);
+
+        if (follow) map.setView(latlng, Math.max(map.getZoom(), 17), { animate: true });
+
+        setStatus("ok", `GPS: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} ±${Math.round(accuracy || 0)}m`);
+
+        if (Number.isFinite(heading)) {
+          lastHeading = heading;
+          applyHeadingToUI(heading);
+          if (compassEnabled) setMapBearing(heading);
+        }
+      },
+      (err) => {
+        const msg =
+          err.code === err.PERMISSION_DENIED ? "ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง" :
+          err.code === err.POSITION_UNAVAILABLE ? "ไม่พบสัญญาณตำแหน่ง" :
+          err.code === err.TIMEOUT ? "ขอข้อมูลตำแหน่งนานเกินไป" :
+          "เกิดข้อผิดพลาดจาก GPS";
+        setStatus("err", `${msg} (code ${err.code})`);
+        btnLocate.textContent = "GPS: ขอสิทธิ์";
+        if (watchId != null) {
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 15000,
+      }
+    );
+  };
+
+  const stopGps = () => {
+    if (watchId == null) return;
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    btnLocate.textContent = "GPS: ขอสิทธิ์";
+    setStatus("idle", "หยุดติดตามตำแหน่งแล้ว");
+  };
+
+  const onDeviceOrientation = (event) => {
+    let heading = null;
+
+    // iOS Safari
+    if (typeof event.webkitCompassHeading === "number") {
+      heading = event.webkitCompassHeading;
+    } else if (typeof event.alpha === "number") {
+      // Many browsers: alpha is clockwise from device's initial orientation; treat as compass-ish.
+      heading = 360 - event.alpha;
+    }
+
+    if (heading == null) return;
+    heading = normalizeDeg(heading);
+
+    lastHeading = heading;
+    applyHeadingToUI(heading);
+    if (compassEnabled) setMapBearing(heading);
+  };
+
+  const startCompass = async () => {
+    // Prefer plugin built-in handler if present
+    if (map?.compassBearing?.enable) {
+      map.compassBearing.enable();
+      compassEnabled = true;
+      setPressed(btnCompass, true, "เข็มทิศหมุนแผนที่: เปิด", "เข็มทิศหมุนแผนที่: ปิด");
+      setStatus("ok", "เข็มทิศ: เปิดแล้ว");
+      return;
+    }
+
+    const canListen = "DeviceOrientationEvent" in window;
+    if (!canListen) {
+      setStatus("err", "อุปกรณ์/เบราว์เซอร์นี้ไม่รองรับเข็มทิศ");
+      return;
+    }
+
+    // iOS requires explicit permission
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+      try {
+        const res = await DeviceOrientationEvent.requestPermission();
+        if (res !== "granted") {
+          setStatus("err", "ไม่ได้รับอนุญาตให้ใช้เข็มทิศ");
+          return;
+        }
+      } catch {
+        setStatus("err", "ขอสิทธิ์เข็มทิศไม่สำเร็จ");
+        return;
+      }
+    }
+
+    window.addEventListener("deviceorientationabsolute", onDeviceOrientation, true);
+    window.addEventListener("deviceorientation", onDeviceOrientation, true);
+
+    compassEnabled = true;
+    setPressed(btnCompass, true, "เข็มทิศหมุนแผนที่: เปิด", "เข็มทิศหมุนแผนที่: ปิด");
+    if (lastHeading != null) setMapBearing(lastHeading);
+    setStatus("ok", "เข็มทิศ: เปิดแล้ว");
+  };
+
+  const stopCompass = () => {
+    if (map?.compassBearing?.disable) map.compassBearing.disable();
+    window.removeEventListener("deviceorientationabsolute", onDeviceOrientation, true);
+    window.removeEventListener("deviceorientation", onDeviceOrientation, true);
+    compassEnabled = false;
+    setPressed(btnCompass, false, "เข็มทิศหมุนแผนที่: เปิด", "เข็มทิศหมุนแผนที่: ปิด");
+    setMapBearing(0);
+    setStatus("idle", "เข็มทิศ: ปิดแล้ว (รีเซ็ตทิศเหนือ)");
+  };
+
+  btnLocate.addEventListener("click", () => {
+    if (watchId == null) startGps();
+    else stopGps();
+  });
+
+  btnFollow.addEventListener("click", () => {
+    follow = !follow;
+    setPressed(btnFollow, follow, "ติดตามตำแหน่ง: เปิด", "ติดตามตำแหน่ง: ปิด");
+    if (follow) {
+      const ll = userMarker.getLatLng();
+      map.setView([ll.lat, ll.lng], Math.max(map.getZoom(), 17), { animate: true });
+    }
+  });
+
+  btnCompass.addEventListener("click", async () => {
+    if (!compassEnabled) await startCompass();
+    else stopCompass();
+  });
+
+  // Keep follow off if user drags the map
+  map.on("dragstart", () => {
+    if (!follow) return;
+    follow = false;
+    setPressed(btnFollow, false, "ติดตามตำแหน่ง: เปิด", "ติดตามตำแหน่ง: ปิด");
+  });
+
+  setPressed(btnFollow, true, "ติดตามตำแหน่ง: เปิด", "ติดตามตำแหน่ง: ปิด");
+  setPressed(btnCompass, false, "เข็มทิศหมุนแผนที่: เปิด", "เข็มทิศหมุนแผนที่: ปิด");
+  setStatus("idle", "แตะ “GPS: ขอสิทธิ์” เพื่อเริ่มใช้งานตำแหน่ง");
+  </script>
 
 </body>
 </html>
