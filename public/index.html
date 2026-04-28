@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>พร้อมทิ้ง</title>
-  <link rel="shortcut icon" href="favicon.png" type="image/png">
+  <link rel="promptting icon" href="icons/favicon.png" type="image/png">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
@@ -12,7 +12,7 @@
 
     html, body {
       width: 100%; height: 100%;
-      font-family: 'Noto Sans Thai', 'Sarabun', sans-serif;
+      font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
       overflow: hidden;
       background: #ccc;
     }
@@ -32,7 +32,11 @@
       inset: 0;
       z-index: 0;
     }
-    
+
+    .leaflet-control-attribution {
+      opacity: 0.1;
+    }
+
     .leaflet-control-zoom { display: none !important; }
 
     /* ─── TOP BAR ─── */
@@ -381,6 +385,93 @@ L.marker([7.9995, 98.3252], { icon: makeBinIcon('#388E3C','#1B5E20', false) }).a
 L.marker([7.9990, 98.3395], { icon: makeBinIcon('#FFA000','#E65100', false) }).addTo(map); // orange-yellow
 </script>
 
+<script>
+  const progressDom = {
+    scoreNumEl: document.querySelector('#topbar .score-num'),
+    lvTextEl: document.querySelector('#topbar .lv-text'),
+    lvNextEl: document.querySelector('#topbar .lv-next'),
+    barFillEl: document.querySelector('#topbar .bar-fill')
+  };
+
+  const progressAnimState = {
+    currentTotalExp: Number.isFinite(Number(progressDom.scoreNumEl?.textContent))
+      ? Number(progressDom.scoreNumEl.textContent)
+      : 0,
+    rafId: null
+  };
+
+  function clamp01(v) {
+    if (v < 0) return 0;
+    if (v > 1) return 1;
+    return v;
+  }
+
+  function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function setProgressUI(totalExp) {
+    const safeTotal = Math.max(0, Math.round(Number(totalExp) || 0));
+
+    const lv = Math.floor(safeTotal / 100);
+    const expInLevel = safeTotal % 100;
+    const barPercent = (expInLevel / 100) * 100;
+
+    if (progressDom.scoreNumEl) progressDom.scoreNumEl.textContent = String(safeTotal);
+    if (progressDom.lvTextEl) progressDom.lvTextEl.textContent = `LV ${lv}`;
+    if (progressDom.lvNextEl) progressDom.lvNextEl.textContent = String(lv + 1);
+    if (progressDom.barFillEl) progressDom.barFillEl.style.width = `${barPercent}%`;
+
+    progressAnimState.currentTotalExp = safeTotal;
+  }
+
+  function progressUpdateSmoother(currentExpLabel, { durationMs = 1000 } = {}) {
+    const target = Math.max(0, Math.round(Number(currentExpLabel) || 0));
+    const start = Math.max(
+      0,
+      Math.round(
+        Number.isFinite(progressAnimState.currentTotalExp)
+          ? progressAnimState.currentTotalExp
+          : Number(progressDom.scoreNumEl?.textContent) || 0
+      )
+    );
+
+    if (progressAnimState.rafId != null) {
+      cancelAnimationFrame(progressAnimState.rafId);
+      progressAnimState.rafId = null;
+    }
+
+    if (durationMs <= 0 || start === target) {
+      setProgressUI(target);
+      return;
+    }
+
+    const startTs = performance.now();
+    const tick = (now) => {
+      const t = clamp01((now - startTs) / durationMs);
+      const easedT = easeOutCubic(t);
+      const value = start + (target - start) * easedT;
+
+      setProgressUI(value);
+
+      if (t < 1) {
+        progressAnimState.rafId = requestAnimationFrame(tick);
+      } else {
+        progressAnimState.rafId = null;
+        setProgressUI(target);
+      }
+    };
+
+    progressAnimState.rafId = requestAnimationFrame(tick);
+  }
+
+  // expose for console/testing
+  window.progressUpdateSmoother = progressUpdateSmoother;
+
+  // sync initial UI (LV + bar) with the current number in DOM
+  setProgressUI(progressAnimState.currentTotalExp);
+</script>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
@@ -399,7 +490,7 @@ L.marker([7.9990, 98.3395], { icon: makeBinIcon('#FFA000','#E65100', false) }).a
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
+      navigator.serviceWorker.register('/service_worker.js')
         .then(r => console.log('SW:', r.scope))
         .catch(e => console.log('SW err:', e));
     });

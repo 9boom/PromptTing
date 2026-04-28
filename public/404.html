@@ -1,19 +1,86 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>404 - Page Not Found</title>
+  <style>
+    /* Google Fonts - เลือกฟอนต์แนวสะอาดๆ */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap');
+
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f4f7f4; /* ครีมเขียวอ่อนๆ */
+      font-family: 'Inter', sans-serif;
+      color: #2d4030; /* เขียวเข้มเกือบดำ */
+    }
+
+    .container {
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 8rem;
+      margin: 0;
+      font-weight: 700;
+      letter-spacing: -2px;
+      color: #8fb996; /* เขียว Sage */
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #5c715e;
+      font-weight: 300;
+      margin-bottom: 30px;
+    }
+
+    .btn-home {
+      display: inline-block;
+      text-decoration: none;
+      background-color: #4f6d7a; /* เขียวอมฟ้าตุ่นๆ */
+      color: white;
+      padding: 12px 30px;
+      border-radius: 50px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    .btn-home:hover {
+      background-color: #2d4030;
+      transform: translateY(-2px);
+    }
+
+    /* ตกแต่งใบไม้นิดๆ ให้ดูรักษ์โลก */
+    .leaf-icon {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
-<body style="background-color: black; color:white;">
-  <p>
-    <p>Hi why are you here ? Click on <a href="https://promptting.web.app">Home</a> button to back</p>
-  </p>
-  <p id="status" style="color:red;">
-    404 Not Found Error
-  </p>
-  <p>
-    <button style="text-align: center; background-color: aliceblue; color:white; border-radius: 8px; width: 100px; height: 64px; display: block;"><a style="color: purple;" href="https://promptting.web.app/">Home</a></button>
-  </p>
+<body>
+
+  <div class="container">
+    <div class="leaf-icon">🌿</div>
+    <h1>404</h1>
+    <h2>Oops! หลงทางเข้าป่าซะแล้ว</h2>
+    <p>ดูเหมือนว่าหน้าที่คุณหาจะไม่มีอยู่จริง หรืออาจถูกย้ายไปที่อื่น</p>
+    
+    <a href="https://promptting.web.app/" class="btn-home">
+      กลับหน้าหลัก
+    </a>
+  </div>
+
 </body>
 </html>

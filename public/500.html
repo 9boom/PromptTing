@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Updating</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #f0f2f0; /* สีพื้นนวลๆ */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      color: #2d4030;
+    }
+
+    /* ตกแต่งพื้นหลังด้วยวงกลมฟุ้งๆ ให้ดูมีมิติรักษ์โลก */
+    .bg-circle {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, #d1e2d3 0%, rgba(240,242,240,0) 70%);
+      border-radius: 50%;
+      z-index: -1;
+      top: -100px;
+      right: -100px;
+    }
+
+    .container {
+      text-align: center;
+      padding: 20px;
+      z-index: 1;
+    }
+
+    .status-code {
+      font-size: clamp(5rem, 15vw, 10rem); /* ปรับขนาดตามหน้าจออัตโนมัติ */
+      font-weight: 900;
+      line-height: 1;
+      color: #8fb996;
+      letter-spacing: -5px;
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: #3e5c43;
+    }
+
+    p {
+      font-size: 1.1rem;
+      color: #5c715e;
+      max-width: 450px;
+      margin: 0 auto 2.5rem auto;
+      line-height: 1.6;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(10px); /* เอฟเฟกต์กระจกฝ้า */
+      padding: 10px 20px;
+      border-radius: 100px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #4f6d7a;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #8fb996;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(143, 185, 150, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(143, 185, 150, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(143, 185, 150, 0); }
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="bg-circle"></div>
+
+  <div class="container">
+    <div class="status-code">MNT</div> <h1>ปิดปรับปรุงระบบชั่วคราว</h1>
+    <p>เรากำลังปรับเปลี่ยนบางอย่างให้ดีขึ้น เพื่อให้คุณได้รับประสบการณ์ที่ยอดเยี่ยมที่สุด กลับมาเจอกันใหม่เร็วๆ นี้</p>
+    
+    <div class="badge">
+      <div class="pulse-dot"></div>
+      UNDER MAINTENANCE
+    </div>
+  </div>
+
+</body>
+</html>
