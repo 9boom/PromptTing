@@ -40,7 +40,7 @@
     }
 
     .leaflet-control-attribution {
-      opacity: 0.1;
+      opacity: 0.5;
     }
 
     .leaflet-control-zoom { display: none !important; }
@@ -216,28 +216,11 @@
       }
     }
 
-    /* ─── PULSE ─── */
-    @keyframes ripple {
-      0%   { transform: translate(-50%,-50%) scale(0.7); opacity: 0.7; }
-      70%  { transform: translate(-50%,-50%) scale(1.6); opacity: 0; }
-      100% { transform: translate(-50%,-50%) scale(0.7); opacity: 0; }
-    }
-    .pulse-ring {
-      position: absolute;
-      top: 50%; left: 50%;
-      width: 72px; height: 72px;
-      border-radius: 50%;
-      background: rgba(30,150,230,0.28);
-      transform: translate(-50%,-50%);
-      animation: ripple 2s infinite;
-      pointer-events: none;
-      z-index: 0;
-    }
     .mwrap {
       position: relative;
       display: flex; align-items: center; justify-content: center;
     }
-    .mwrap svg { position: relative; z-index: 1; }
+    .mwrap img { position: relative; z-index: 1; }
 
     /* PWA APP SUGGESTION */
     /* PWA Banner Styles */
@@ -313,7 +296,7 @@
   <div id="topbar">
     <div class="lbl-small">คะแนนสะสม</div>
     <div class="score-row">
-      <span class="score-num">45</span>
+      <span class="score-num">0</span>
       <span class="score-exp">EXP</span>
     </div>
     <div class="lv-row">
@@ -464,33 +447,24 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 // Bin icon builder
-function makeBinIcon(fillColor, lineColor, withPulse) {
-  const svgW = 34, svgH = 40;
-  const svg = `<svg width="${svgW}" height="${svgH}" viewBox="0 0 34 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="12" y="1" width="10" height="4.5" rx="2" fill="${fillColor}"/>
-    <rect x="4" y="5" width="26" height="6" rx="2" fill="${fillColor}"/>
-    <rect x="5" y="11" width="24" height="25" rx="2.5" fill="${fillColor}"/>
-    <line x1="12" y1="15" x2="12" y2="32" stroke="rgba(255,255,255,0.75)" stroke-width="2" stroke-linecap="round"/>
-    <line x1="17" y1="15" x2="17" y2="32" stroke="rgba(255,255,255,0.75)" stroke-width="2" stroke-linecap="round"/>
-    <line x1="22" y1="15" x2="22" y2="32" stroke="rgba(255,255,255,0.75)" stroke-width="2" stroke-linecap="round"/>
-  </svg>`;
-
-  const pulse = withPulse ? `<div class="pulse-ring"></div>` : '';
-  const html = `<div class="mwrap" style="width:${svgW}px;height:${svgH}px;">${pulse}${svg}</div>`;
+function makeBinIcon(binType) {
+  const imgW = 68, imgH = 80;
+  const img = `<img src="bin_symbols/${binType}.png" alt="Trash Icon" width="${imgW}" height="${imgH}">`;
+  const html = `<div class="mwrap" style="width:${imgW}px;height:${imgH}px;">${img}</div>`;
 
   return L.divIcon({
     html,
     className: '',
-    iconSize: [svgW, svgH],
-    iconAnchor: [svgW / 2, svgH]
+    iconSize: [imgW, imgH],
+    iconAnchor: [imgW / 2, imgH]
   });
 }
 
 // Place markers (positions approximate to match screenshot layout)
-L.marker([8.0108, 98.3278], { icon: makeBinIcon('#1976D2','#0D47A1', false) }).addTo(map); // blue
-L.marker([8.0065, 98.3325], { icon: makeBinIcon('#FFC107','#E65100', true)  }).addTo(map); // yellow+pulse
-L.marker([7.9995, 98.3252], { icon: makeBinIcon('#388E3C','#1B5E20', false) }).addTo(map); // green
-L.marker([7.9990, 98.3395], { icon: makeBinIcon('#FFA000','#E65100', false) }).addTo(map); // orange-yellow
+L.marker([8.0108, 98.3278], { icon: makeBinIcon('normal') }).addTo(map); // blue
+L.marker([8.0065, 98.3325], { icon: makeBinIcon('dangerous')  }).addTo(map); // yellow+pulse
+L.marker([7.9995, 98.3252], { icon: makeBinIcon('organic') }).addTo(map); // green
+L.marker([7.9990, 98.3395], { icon: makeBinIcon('recycle') }).addTo(map); // orange-yellow
 </script>
 
 <script>
