@@ -70,3 +70,6 @@ node_modules/
 
 # my plan
 *.txt
+
+# my test
+test

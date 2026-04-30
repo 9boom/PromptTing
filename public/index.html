@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>พร้อมทิ้ง</title>
-  <link rel="promptting icon" href="icons/favicon.png" type="image/png">
+  <link rel="promptting icon" href="assets/icons/favicon.png" type="image/png">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <style>
@@ -313,7 +313,7 @@
   <div id="right-btns">
 
     <!-- ตารางอันดับ -->
-    <button class="rbtn">
+    <button class="rbtn" onclick="openPopup('leaderboard')">
       <div class="rbtn-circle">
         <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
           <path d="M6 28 L9.5 14 L15 21 L19 7 L23 21 L28.5 14 L32 28 Z" fill="#F9A825" stroke="#E65100" stroke-width="1.2" stroke-linejoin="round"/>
@@ -327,7 +327,7 @@
     </button>
 
     <!-- ภารกิจ -->
-    <button class="rbtn">
+    <button class="rbtn" onclick="openPopup('mission')">
       <div class="rbtn-circle">
         <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
           <!-- clipboard -->
@@ -345,7 +345,7 @@
     </button>
 
     <!-- เหรียญ -->
-    <button class="rbtn">
+    <button class="rbtn" onclick="openPopup('badge')">
       <div class="rbtn-circle">
         <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
           <!-- light blue circle bg -->
@@ -387,7 +387,7 @@
       </svg>
     </button>
 
-    <button id="mybin-btn">
+    <button id="mybin-btn" onclick="openPopup('mnbin')">
       <div class="icon-box">
         <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
           <!-- handle -->
@@ -413,7 +413,7 @@
   <div id="pwa-install-banner" style="display: none;">
   <div class="pwa-content">
     <div class="pwa-icon">
-      <img src="icons/favicon.png" width="40" height="40" alt="app icon">
+      <img src="assets/icons/favicon.png" width="40" height="40" alt="app icon">
     </div>
     <div class="pwa-text">
       <div class="pwa-title">ติดตั้งแอป "พร้อมทิ้ง"</div>
@@ -422,6 +422,11 @@
     <button id="pwa-install-btn">ติดตั้ง</button>
     <button id="pwa-close-btn">✕</button>
   </div>
+</div>
+
+<!-- POPUP SYSTEM -->
+<div id="popup-overlay" style="display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center;">
+  <div id="popup-container"></div>
 </div>
 
 </div>
@@ -449,7 +454,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // Bin icon builder
 function makeBinIcon(binType) {
   const imgW = 68, imgH = 80;
-  const img = `<img src="bin_symbols/${binType}.png" alt="Trash Icon" width="${imgW}" height="${imgH}">`;
+  const img = `<img src="assets/binsyms/${binType}.png" alt="Trash Icon" width="${imgW}" height="${imgH}">`;
   const html = `<div class="mwrap" style="width:${imgW}px;height:${imgH}px;">${img}</div>`;
 
   return L.divIcon({
@@ -507,7 +512,7 @@ L.marker([7.9990, 98.3395], { icon: makeBinIcon('recycle') }).addTo(map); // ora
     progressAnimState.currentTotalExp = safeTotal;
   }
 
-  function progressUpdateSmoother(currentExpLabel, { durationMs = 1000 } = {}) {
+  function progressUpdateSmoother(currentExpLabel, { durationMs = 3000 } = {}) {
     const target = Math.max(0, Math.round(Number(currentExpLabel) || 0));
     const start = Math.max(
       0,
@@ -577,6 +582,49 @@ L.marker([7.9990, 98.3395], { icon: makeBinIcon('recycle') }).addTo(map); // ora
         .catch(e => console.log('SW err:', e));
     });
   }
+</script>
+
+<script>
+const _popupCache = {};
+
+async function openPopup(popupId) {
+  const overlay = document.getElementById('popup-overlay');
+  const container = document.getElementById('popup-container');
+
+  if (!_popupCache[popupId]) {
+    const res = await fetch(`ui/popup/${popupId}.html`);
+    const html = await res.text();
+    _popupCache[popupId] = html;
+  }
+
+  container.innerHTML = '';
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(_popupCache[popupId], 'text/html');
+
+  // ดึง <style> และ <link> จาก <head>
+  [...doc.head.querySelectorAll('style, link[rel="stylesheet"]')].forEach(node => {
+    container.appendChild(document.importNode(node, true));
+  });
+
+  // append nodes จาก <body>
+  [...doc.body.childNodes].forEach(node => {
+    if (node.nodeName === 'SCRIPT') {
+      const script = document.createElement('script');
+      script.innerHTML = node.innerHTML;
+      container.appendChild(script);
+    } else {
+      container.appendChild(document.importNode(node, true));
+    }
+  });
+
+  overlay.style.display = 'flex';
+}
+
+function closePopup() {
+  const overlay = document.getElementById('popup-overlay');
+  overlay.style.display = 'none';
+}
 </script>
 
 <script>

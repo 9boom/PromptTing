@@ -1,0 +1,235 @@
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .popup {
+      background: #e8e8e8;
+      border-radius: 20px;
+      width: 300px;
+      padding: 0 0 36px 0;
+      position: relative;
+    }
+
+    .popup-header {
+      display: flex;
+      align-items: center;
+      padding: 16px 16px 14px 16px;
+      gap: 10px;
+      position: relative;
+    }
+
+    .trophy-icon {
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .popup-title {
+      font-family: 'Sarabun', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 0px;
+      right: 0px;
+      width: 40px;
+      height: 40px;
+      background: #e53935;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .close-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .divider {
+      height: 1px;
+      background: #c8c8c8;
+      margin: 0 0 18px 0;
+    }
+
+    .missions-grid {
+      display: flex;
+      flex-direction: row;
+      gap: 18px;
+      padding: 0 20px;
+    }
+
+    /* ---- Mission Item ---- */
+    .mission-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .mission-circle {
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.25s, background 0.25s;
+    }
+
+    /* สถานะเทา (default ทุกไอคอน) */
+    .mission-circle.inactive {
+      background: #d0d0d0;
+      border: 3px solid #b0b0b0;
+    }
+
+    /* สถานะสีเข้ม (activated) */
+    .mission-circle.active {
+      background: #ffffff;
+      border: 3px solid #2e7d32;
+    }
+
+    .mission-icon {
+      font-size: 30px;
+      line-height: 1;
+      /* เทา = desaturate ด้วย filter */
+      filter: grayscale(100%) brightness(0.75);
+      transition: filter 0.25s;
+    }
+
+    .mission-circle.active .mission-icon {
+      filter: none; /* สีเต็ม */
+    }
+
+    .mission-icon-svg {
+      width: 28px;
+      height: 28px;
+      transition: stroke 0.25s;
+    }
+
+    .mission-label {
+      font-family: 'Sarabun', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      text-align: center;
+      line-height: 1.4;
+      color: #888;
+      transition: color 0.25s;
+    }
+
+    .mission-item.active-item .mission-label {
+      color: #222;
+    }
+  </style>
+
+  <div class="overlay" id="overlay">
+    <div class="popup">
+      <div class="popup-header">
+        <span class="trophy-icon">🏆</span>
+        <span class="popup-title">คอลเลกชันเหรียญ</span>
+        <button class="close-btn" onclick="window.closePopup()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round">
+            <line x1="6" y1="6" x2="18" y2="18"/>
+            <line x1="18" y1="6" x2="6" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="missions-grid">
+
+        <!-- ภารกิจ 1: หน้าใหม่ไฟแรง -->
+        <div class="mission-item" id="mission-1" onclick="toggleMission('mission-1')">
+          <div class="mission-circle inactive">
+            <span class="mission-icon">🔥</span>
+          </div>
+          <div class="mission-label">หน้าใหม่<br>ไฟแรง</div>
+        </div>
+
+        <!-- ภารกิจ 2: แยกขยะ -->
+        <div class="mission-item" id="mission-2" onclick="toggleMission('mission-2')">
+          <div class="mission-circle inactive">
+            <svg class="mission-icon" viewBox="0 0 24 24" fill="none"
+                 stroke="#888" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14H6L5 6"/>
+              <path d="M10 11v6"/>
+              <path d="M14 11v6"/>
+              <path d="M9 6V4h6v2"/>
+            </svg>
+          </div>
+          <div class="mission-label">แยกขยะ<br>1 ครั้ง</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+    function toggleMission(id) {
+      const item = document.getElementById(id);
+      const circle = item.querySelector('.mission-circle');
+      const svgIcon = item.querySelector('svg.mission-icon');
+
+      const isActive = circle.classList.contains('active');
+      
+      if (isActive) {
+        circle.classList.remove('active');
+        circle.classList.add('inactive');
+        item.classList.remove('active-item');
+        if (svgIcon) svgIcon.setAttribute('stroke', '#888');
+      } else {
+        circle.classList.remove('inactive');
+        circle.classList.add('active');
+        item.classList.add('active-item');
+        if (svgIcon) svgIcon.setAttribute('stroke', '#555');
+      }
+    }
+
+    // ฟังก์ชันเปิดใช้จากภายนอก: activateMission('mission-1')
+    function activateMission(id) {
+      const item = document.getElementById(id);
+      const circle = item.querySelector('.mission-circle');
+      const svgIcon = item.querySelector('svg.mission-icon');
+      circle.classList.remove('inactive');
+      circle.classList.add('active');
+      item.classList.add('active-item');
+      if (svgIcon) svgIcon.setAttribute('stroke', '#555');
+    }
+
+    // ฟังก์ชันปิดสีจากภายนอก: deactivateMission('mission-1')
+    function deactivateMission(id) {
+      const item = document.getElementById(id);
+      const circle = item.querySelector('.mission-circle');
+      const svgIcon = item.querySelector('svg.mission-icon');
+      circle.classList.remove('active');
+      circle.classList.add('inactive');
+      item.classList.remove('active-item');
+      if (svgIcon) svgIcon.setAttribute('stroke', '#888');
+    }
+    
+</script>

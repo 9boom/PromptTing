@@ -1,0 +1,215 @@
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: #000;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Overlay */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    /* Popup container */
+    .popup {
+      background: #e0e0e0;
+      border-radius: 20px;
+      width: 340px;
+      padding: 20px;
+      position: relative;
+    }
+
+    /* Close button */
+    .close-btn {
+      position: absolute;
+      top: 0px;
+      right: 0px;
+      width: 50px;
+      height: 50px;
+      background: #e53935;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .close-btn:hover {
+      background: #c62828;
+    }
+
+    .close-btn svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    /* Header */
+    .popup-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .popup-header .icon {
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .popup-header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    /* Mission list */
+    .mission-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Mission card */
+    .mission-card {
+      background: #f5f5f5;
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .mission-icon {
+      width: 52px;
+      height: 52px;
+      background: #ffffff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      flex-shrink: 0;
+    }
+
+    .mission-info {
+      flex: 1;
+    }
+
+    .mission-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .mission-desc {
+      font-size: 13px;
+      color: #555;
+      margin-top: 2px;
+    }
+
+    .mission-exp {
+      font-size: 13px;
+      color: #555;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    /* Action button */
+    .action-btn {
+      background: #424242;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .action-btn:hover {
+      background: #212121;
+    }
+
+    .action-btn:active {
+      transform: scale(0.97);
+    }
+  </style>
+
+
+<div class="overlay" id="overlay">
+    <div class="popup" id="popup">
+
+      <!-- Close button -->
+      <button class="close-btn" onclick="window.closePopup()" aria-label="ปิด">
+        <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <line x1="4" y1="4" x2="18" y2="18" stroke="white" stroke-width="3" stroke-linecap="round"/>
+          <line x1="18" y1="4" x2="4" y2="18" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </button>
+
+      <!-- Header -->
+      <div class="popup-header">
+        <span class="icon">🎯</span>
+        <h1>ภารกิจ</h1>
+      </div>
+
+      <!-- Mission list -->
+      <div class="mission-list">
+
+        <!-- Mission 1 -->
+        <div class="mission-card">
+          <div class="mission-icon">♻️</div>
+          <div class="mission-info">
+            <div class="mission-title">นักรีไซเคิล</div>
+            <div class="mission-desc">แยกขยะรีไซเคิล 3 ครั้ง</div>
+            <div class="mission-exp">30 EXP</div>
+          </div>
+          <button class="action-btn" onclick="doMission(this, 'นักรีไซเคิล')">ทำภารกิจ</button>
+        </div>
+
+        <!-- Mission 2 -->
+        <div class="mission-card">
+          <div class="mission-icon">🥦</div>
+          <div class="mission-info">
+            <div class="mission-title">นักกินผัก</div>
+            <div class="mission-desc">แยกขยะอินทรีย์ 3 ครั้ง</div>
+            <div class="mission-exp">30 EXP</div>
+          </div>
+          <button class="action-btn" onclick="doMission(this, 'นักกินผัก')">ทำภารกิจ</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Mission button action
+    function doMission(btn, name) {
+      btn.textContent = 'กำลังทำ...';
+      btn.disabled = true;
+      btn.style.background = '#757575';
+      setTimeout(function () {
+        btn.textContent = 'สำเร็จ ✓';
+        btn.style.background = '#388e3c';
+      }, 1000);
+    }
+  </script>
