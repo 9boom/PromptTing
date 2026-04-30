@@ -103,7 +103,7 @@
   </div>
 
   <!-- แดชบอร์ด -->
-  <div class="btn-item">
+  <div class="btn-item" onclick="openDashboard()">
     <div class="btn-icon">
       <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
         <path d="M6 10 L6 34 L22 38 L38 34 L38 10 L22 6 Z"
@@ -122,5 +122,8 @@
 </div>
 
 <script>
-    console.log("...")
+    console.log("DEBUG: M menu injected");
+    function openDashboard(){
+      window.open("ui/dashboard/dashboard.html", "_self");
+    }
 </script>

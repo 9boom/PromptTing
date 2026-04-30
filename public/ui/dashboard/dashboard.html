@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#ffffff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>ระบบถังขยะ</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Sarabun', sans-serif;
+    background: #f0f0f0;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #f0f0f0;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+  .stat-card {
+    flex: 1;
+    background: #fff;
+    border-radius: 10px;
+    padding: 10px 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  .stat-label {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 2px;
+  }
+  .stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #111;
+  }
+
+  /* MAP CONTAINER */
+  .map-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  #map {
+    width: 100%;
+    height: 100%;
+    background: #e8e0d8;
+  }
+
+  /* LEAFLET overrides */
+  .leaflet-control-zoom { display: none; }
+  .leaflet-control-attribution { font-size: 9px; opacity: 0.6; }
+
+  /* BIN MARKERS */
+  .bin-marker-img {
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+    transition: transform 0.15s;
+    cursor: pointer;
+  }
+  .bin-marker-img:active { transform: scale(0.9); }
+
+  /* POPUP CARD (มินิมอลขึ้น) */
+  .bin-popup {
+    position: fixed;
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    z-index: 1000;
+    min-width: 180px;
+    display: none;
+    pointer-events: all;
+  }
+  .bin-popup.visible { display: block; }
+  .bin-popup h3 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: #111;
+  }
+  .bin-popup p {
+    font-size: 12px;
+    color: #444;
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+  .btn-delete {
+    margin-top: 10px;
+    width: 100%;
+    background: #e53935;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'Sarabun', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-delete:active { background: #b71c1c; }
+
+  /* LEGEND (ปรับดีไซน์ให้มินิมอล) */
+  .legend {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    z-index: 900;
+    min-width: 140px;
+  }
+  .legend h4 {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: #222;
+  }
+  .legend-item:last-child { margin-bottom: 0; }
+  .legend-item-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .legend-item img { width: 20px; height: 24px; object-fit: contain; }
+  .legend-count {
+    font-weight: 700;
+    color: #111;
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.85);
+    background: rgba(0,0,0,0.78);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+  /* OVERLAY to close popup */
+  .popup-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+  }
+  .popup-overlay.visible { display: block; }
+</style>
+</head>
+<body>
+
+<div class="stats-bar">
+  <div class="stat-card">
+    <div class="stat-label">จำนวนการทิ้งรวม</div>
+    <div class="stat-value" id="totalThrows">0 ครั้ง</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">จุดทิ้งทั้งหมด</div>
+    <div class="stat-value" id="totalBins">0 ถัง</div>
+  </div>
+</div>
+
+<div class="map-container">
+  <div id="map"></div>
+
+  <div class="legend">
+    <h4>รายละเอียดถัง</h4>
+    <div class="legend-item">
+      <div class="legend-item-left">
+        <img src="../../assets/binsyms/organic.png" alt="organic">
+        <span>อินทรีย์</span>
+      </div>
+      <span class="legend-count"><span id="countOrganic">0</span></span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-item-left">
+        <img src="../../assets/binsyms/dangerous.png" alt="hazard">
+        <span>อันตราย</span>
+      </div>
+      <span class="legend-count"><span id="countHazard">0</span></span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-item-left">
+        <img src="../../assets/binsyms/recycle.png" alt="recycle">
+        <span>รีไซเคิล</span>
+      </div>
+      <span class="legend-count"><span id="countRecycle">0</span></span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-item-left">
+        <img src="../../assets/binsyms/normal.png" alt="general">
+        <span>ทั่วไป</span>
+      </div>
+      <span class="legend-count"><span id="countGeneral">0</span></span>
+    </div>
+  </div>
+</div>
+
+<div class="popup-overlay" id="popupOverlay" onclick="closePopup()"></div>
+
+<div class="bin-popup" id="binPopup">
+  <h3>พฤติกรรมถัง</h3>
+  <p>ประเภท: <span id="popType" style="font-weight: 600;">-</span></p>
+  <p>ทิ้งทั้งหมด: <span id="popTotal" style="font-weight: 600;">0</span> ครั้ง</p>
+  <p>ทิ้งถูกประเภท: <span id="popCorrect" style="font-weight: 600;">0</span> ครั้ง</p>
+  <button class="btn-delete" onclick="deleteBin()">ลบถังขยะ</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// ======= DATA =======
+let bins = []; 
+
+// แมปชื่อไฟล์รูปภาพตามประเภทของถัง
+const BIN_IMAGES = {
+  hazard:  'dangerous.png',
+  general: 'normal.png',
+  organic: 'organic.png',
+  recycle: 'recycle.png',
+};
+
+// ======= API FETCH =======
+async function fetchBinData() {
+  try {    
+    // เรียกใช้ API
+    const response = await fetch('http://10.0.3.15:8081/fetch_data');
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    bins = data;
+    
+    renderMarkers();
+    
+  } catch (error) {
+    console.error('Error fetching bin data:', error);
+    showToast('ไม่สามารถเชื่อมต่อกับ Server ได้');
+  }
+}
+
+// ======= MAP INIT =======
+const map = L.map('map', {
+  center: [7.9308, 98.3775],
+  zoom: 16,
+  zoomControl: false,
+  attributionControl: true,
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap',
+  maxZoom: 19,
+}).addTo(map);
+
+// ======= MARKERS =======
+let markers = {};
+let selectedBinId = null;
+
+// เปลี่ยนมาใช้รูปภาพแทน SVG
+function createBinIcon(bin) {
+  // ดึงชื่อไฟล์จากประเภท ถ้าไม่ตรงกับอะไรเลยให้ใช้ normal.png เป็นค่าเริ่มต้น
+  const fileName = BIN_IMAGES[bin.type] || 'normal.png'; 
+  
+  return L.icon({
+    iconUrl: `../../assets/binsyms/${fileName}`,
+    iconSize: [68, 80], // ขนาด width 68, height 80 ตามที่ระบุ
+    iconAnchor: [34, 80], // จุดกึ่งกลางด้านล่างเพื่อให้ปักหมุดได้ตรงตำแหน่ง
+    popupAnchor: [0, -75],
+    className: 'bin-marker-img' 
+  });
+}
+
+function renderMarkers() {
+  // clear old
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+
+  bins.forEach(bin => {
+    if (bin.lat && bin.lng) {
+      const marker = L.marker([bin.lat, bin.lng], { icon: createBinIcon(bin) });
+      marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
+        showPopup(bin, e.originalEvent);
+      });
+      marker.addTo(map);
+      markers[bin.id] = marker;
+    }
+  });
+
+  updateStats();
+  updateLegend();
+}
+
+function updateStats() {
+  const totalThrows = bins.reduce((s, b) => s + (b.total || 0), 0);
+  document.getElementById('totalThrows').textContent = totalThrows + ' ครั้ง';
+  document.getElementById('totalBins').textContent = bins.length + ' ถัง';
+}
+
+function updateLegend() {
+  document.getElementById('countOrganic').textContent = bins.filter(b => b.type === 'organic').length;
+  document.getElementById('countHazard').textContent = bins.filter(b => b.type === 'hazard').length;
+  document.getElementById('countRecycle').textContent = bins.filter(b => b.type === 'recycle').length;
+  document.getElementById('countGeneral').textContent = bins.filter(b => b.type === 'general').length;
+}
+
+// ======= POPUP =======
+function showPopup(bin, evt) {
+  selectedBinId = bin.id;
+  document.getElementById('popType').textContent = bin.label || '-';
+  document.getElementById('popTotal').textContent = bin.total || 0;
+  document.getElementById('popCorrect').textContent = bin.correct || 0;
+
+  const popup = document.getElementById('binPopup');
+  popup.classList.add('visible');
+  document.getElementById('popupOverlay').classList.add('visible');
+
+  const x = Math.min(evt.clientX - 20, window.innerWidth - 210);
+  const y = Math.min(evt.clientY + 10, window.innerHeight - 180);
+  popup.style.left = Math.max(8, x) + 'px';
+  popup.style.top = Math.max(8, y) + 'px';
+}
+
+function closePopup() {
+  document.getElementById('binPopup').classList.remove('visible');
+  document.getElementById('popupOverlay').classList.remove('visible');
+  selectedBinId = null;
+}
+
+function deleteBin() {
+  if (!selectedBinId) return;
+  
+  bins = bins.filter(b => b.id !== selectedBinId);
+  closePopup();
+  renderMarkers();
+  showToast('ลบถังขยะออกจากหน้าจอเรียบร้อย');
+}
+
+// ======= TOAST =======
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ======= CLOSE POPUP ON MAP CLICK =======
+map.on('click', closePopup);
+
+// ======= INIT =======
+fetchBinData();
+setInterval(fetchBinData, 10000);
+
+</script>
+</body>
+</html>
