@@ -28,8 +28,8 @@
     #app {
       position: relative;
       width: 100vw;
-      height: 100dvh;
-      min-height: 100vh;
+      height: var(--appH, 100dvh);
+      min-height: var(--appH, 100vh);
       overflow: hidden;
     }
 
@@ -588,6 +588,23 @@ L.marker([7.9990, 98.3395], { icon: makeBinIcon('recycle') }).addTo(map); // ora
 <script>
 const _popupCache = {};
 
+function scopePopupCssToOverlay(cssText) {
+  const scope = '#popup-overlay';
+  let css = String(cssText || '');
+
+  // Scope global selectors used inside popup files so they don't affect the main page.
+  // This intentionally targets the patterns found in our popup HTML files.
+  css = css.replace(/(^|[^\w-])body([^\w-])/g, `$1${scope}$2`);
+  css = css.replace(/(^|[^\w-])html([^\w-])/g, `$1${scope}$2`);
+
+  // Scope universal selectors.
+  css = css.replace(/(^|[,{]\s*)\*(\s*[{,])/g, `$1${scope} *$2`);
+  css = css.replace(/(^|[,{]\s*)\*\s*::before(\s*[{,])/g, `$1${scope} *::before$2`);
+  css = css.replace(/(^|[,{]\s*)\*\s*::after(\s*[{,])/g, `$1${scope} *::after$2`);
+
+  return css;
+}
+
 async function openPopup(popupId) {
   const overlay = document.getElementById('popup-overlay');
   const container = document.getElementById('popup-container');
@@ -605,7 +622,11 @@ async function openPopup(popupId) {
 
   // ดึง <style> และ <link> จาก <head>
   [...doc.head.querySelectorAll('style, link[rel="stylesheet"]')].forEach(node => {
-    container.appendChild(document.importNode(node, true));
+    const imported = document.importNode(node, true);
+    if (imported.nodeName === 'STYLE') {
+      imported.textContent = scopePopupCssToOverlay(imported.textContent);
+    }
+    container.appendChild(imported);
   });
 
   // append nodes จาก <body>
@@ -620,11 +641,13 @@ async function openPopup(popupId) {
   });
 
   overlay.style.display = 'flex';
+  try { window.updateAppHeight?.('popup.open'); } catch (_) {}
 }
 
 function closePopup() {
   const overlay = document.getElementById('popup-overlay');
   overlay.style.display = 'none';
+  try { window.updateAppHeight?.('popup.close'); } catch (_) {}
 }
 </script>
 
@@ -672,5 +695,28 @@ window.addEventListener('appinstalled', (event) => {
   pwaBanner.style.display = 'none';
 });
 </script>
+
+<script>
+  (function () {
+    function computeAppHeightPx() {
+      return Math.round(window.visualViewport?.height ?? window.innerHeight);
+    }
+
+    window.updateAppHeight = function updateAppHeight() {
+      try {
+        const h = computeAppHeightPx();
+        document.documentElement.style.setProperty('--appH', `${h}px`);
+      } catch (_) {}
+    };
+
+    window.addEventListener('load', window.updateAppHeight);
+    window.addEventListener('resize', window.updateAppHeight);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', window.updateAppHeight);
+      window.visualViewport.addEventListener('scroll', window.updateAppHeight);
+    }
+  })();
+</script>
+
 </body>
 </html>
