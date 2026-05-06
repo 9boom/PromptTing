@@ -202,7 +202,8 @@
   </div>
 
   <script>
-    // Mission button action
+    (function(){
+      // Mission button action
     function doMission(btn, name) {
       btn.textContent = 'กำลังทำ...';
       btn.disabled = true;
@@ -212,4 +213,6 @@
         btn.style.background = '#388e3c';
       }, 1000);
     }
+    })();
+    
   </script>

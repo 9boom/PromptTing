@@ -190,6 +190,7 @@
   </div>
 
 <script>
+  (function() {
     function toggleMission(id) {
       const item = document.getElementById(id);
       const circle = item.querySelector('.mission-circle');
@@ -231,5 +232,6 @@
       item.classList.remove('active-item');
       if (svgIcon) svgIcon.setAttribute('stroke', '#888');
     }
+  })();
     
 </script>

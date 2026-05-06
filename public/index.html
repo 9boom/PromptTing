@@ -888,11 +888,16 @@ function closePopup() {
 
   // If come from dashboard or admin bin verify
   const redirect_mnbin = params.get("redirect_mnbin");
+  const redirect_qrgen = params.get("redirect_qrgen");
   if (redirect_mnbin) {
     openPopup('mnbin');
   }
+  if (redirect_qrgen){
+    openPopup('qrgen');
+  }
   const url = new URL(window.location);
   url.searchParams.delete("redirect_mnbin");
+  url.searchParams.delete("redirect_qrgen");
   window.history.replaceState({}, "", url);
 
 
@@ -914,7 +919,7 @@ function closePopup() {
   }
 
   function openBadge(){
-    openBadge('badge');
+    openPopup('badge');
   }
 </script>
 

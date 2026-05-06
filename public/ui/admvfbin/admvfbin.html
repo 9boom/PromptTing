@@ -510,17 +510,17 @@
       title: 'QR Code นี้ถูกใช้ไปแล้ว',
       body: `QR Code นี้<b>ถูกลงทะเบียนถังขยะไปแล้ว</b><br>
              ไม่สามารถนำมาใช้ซ้ำได้<br>
-             กรุณาลงทะเบียน QR Code ของถังขยะ<b>ใบใหม่</b>`,
+             หากคุณต้องการจะลงทะเบียนถังขยะใบใหม่ ให้เลือกตัวเลือก <b>เพิ่มคิวอาร์โค้ด</b> ในเมนู <b>ถังขยะของฉัน</b> แล้วนำไปติดที่ถังขยะที่ต้องการก่อนจึงจะแสกน`,
       buttons: [
         {
-          label: 'ลงทะเบียน QR Code ใหม่',
+          label: 'เพิ่มคิวอาร์โค้ด',
           style: 'primary',
-          action: () => { startScanner(); }
+          action: () => { window.location.href = 'https://promptting.web.app?redirect_qrgen=true'; }
         },
         {
           label: 'แสกนใหม่',
           style: 'secondary',
-          action: () => { window.location.href = 'https://promptting.web.app'; }
+          action: () => { startScanner(); }
         },
         
       ]
