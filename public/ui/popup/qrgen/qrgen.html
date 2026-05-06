@@ -1,0 +1,334 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
+
+  :root {
+    --green: #2b9e5e;
+    --green-dark: #239356;
+    --green-light: #e8f5ee;
+    --green-text: #1e7a43;
+    --border: #e0e0e0;
+    --text-primary: #1a1a1a;
+    --text-secondary: #444444;
+    --text-muted: #888888;
+  }
+
+  * { box-sizing: border-box; }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.60);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-card {
+    width: min(100%, 360px);
+    max-height: 92vh;
+    overflow-y: auto;
+    scrollbar-width: none;
+    background: #ffffff;
+    border-radius: 20px;
+    border: 0.5px solid var(--border);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.30);
+    display: flex;
+    flex-direction: column;
+    font-family: 'Sarabun', sans-serif;
+  }
+
+  .modal-card::-webkit-scrollbar { display: none; }
+
+  /* HEADER */
+  .modal-header {
+    padding: 16px 18px 14px;
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .modal-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--green-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .modal-icon svg { width: 18px; height: 18px; }
+
+  .modal-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  /* PREVIEW — ล็อกขนาดตาม aspect ratio 592:842 */
+  .poster-preview {
+    width: 100%;
+    /* aspect ratio ของ poster 592×842 */
+    aspect-ratio: 592 / 842;
+    max-height: 340px;         /* กันยืดสูงเกินบนจอใหญ่ */
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  #poster-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;       /* ไม่ crop ไม่บิด */
+    display: none;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  /* Spinner — แยก ring กับ label ออกจากกัน */
+  .spinner-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    position: absolute;
+  }
+
+  .ring {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 3px solid #dddddd;
+    border-top-color: var(--green);
+    animation: spin 0.85s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .spinner-label {
+    font-size: 12px;
+    color: #666666;
+    font-family: 'Sarabun', sans-serif;
+    white-space: nowrap;
+  }
+
+  /* BODY */
+  .modal-body {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+
+  .steps-block { display: flex; flex-direction: column; gap: 10px; }
+
+  .step-row { display: flex; align-items: flex-start; gap: 10px; }
+
+  .step-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--green-light);
+    color: var(--green-text);
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-family: 'Sarabun', sans-serif;
+  }
+
+  .step-text {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .divider {
+    height: 0.5px;
+    background: var(--border);
+    margin: 0 -18px;
+  }
+
+  /* BUTTONS */
+  .action-row { display: flex; gap: 8px; }
+
+  .btn-dl {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 11px 12px;
+    border-radius: 12px;
+    border: 0.5px solid #cccccc;
+    background: #ffffff;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: 'Sarabun', sans-serif;
+    transition: background 0.15s;
+  }
+
+  .btn-dl:hover { background: #f5f5f5; }
+  .btn-dl:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-dl svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  .btn-confirm {
+    flex: 1.4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 11px 12px;
+    border-radius: 12px;
+    border: none;
+    background: var(--green);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Sarabun', sans-serif;
+    transition: background 0.15s;
+  }
+
+  .btn-confirm:hover { background: var(--green-dark); }
+  .btn-confirm svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  .btn-later {
+    width: 100%;
+    padding: 10px;
+    border-radius: 12px;
+    border: 0.5px solid #cccccc;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+    font-family: 'Sarabun', sans-serif;
+    text-align: center;
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .btn-later:hover { color: var(--text-primary); background: #f5f5f5; }
+
+  @media (max-width: 380px) {
+    .modal-card { border-radius: 16px; }
+    .poster-preview { max-height: 280px; }
+  }
+</style>
+
+<div class="modal-overlay" id="my-popup">
+  <div class="modal-card">
+
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2b9e5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <path d="M14 14h2v2h-2zM18 14h3M14 18v3M18 18h3v3h-3z"/>
+        </svg>
+      </div>
+      <p class="modal-title">ลงทะเบียนคิวอาร์โค้ด</p>
+    </div>
+
+    <div class="poster-preview">
+      <div class="spinner-wrap" id="loader">
+        <div class="ring"></div>
+        <span class="spinner-label">กำลังโหลด...</span>
+      </div>
+      <img id="poster-image" alt="QR Poster">
+    </div>
+
+    <div class="modal-body">
+      <div class="steps-block">
+        <div class="step-row">
+          <div class="step-num">1</div>
+          <p class="step-text">ดาวน์โหลดคิวอาร์โค้ด แล้วนำไปพิมพ์เป็นสติ๊กเกอร์หรือกระดาษ</p>
+        </div>
+        <div class="step-row">
+          <div class="step-num">2</div>
+          <p class="step-text">ติดคิวอาร์โค้ดที่จุดใช้งาน จากนั้นเข้าเมนูถังขยะของฉัน → ยืนยันถัง หรือกดปุ่มด้านล่างเพื่อสแกนยืนยัน</p>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="action-row">
+        <button class="btn-dl" id="btn-dl" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          ดาวน์โหลด
+        </button>
+        <button class="btn-confirm" onclick="window.open('ui/admvfbin/admvfbin.html', '_self')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 11 12 14 22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+          ยืนยันถัง
+        </button>
+      </div>
+
+      <button class="btn-later" onclick="window.openPopup('mnbin');">ยืนยันภายหลัง</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  let localBlobUrl = null;
+  const loader = document.getElementById('loader');
+  const imgEl = document.getElementById('poster-image');
+  const dlBtn = document.getElementById('btn-dl');
+
+  async function init() {
+    const url = `http://127.0.0.1:8082/fetch_poster?t=${Date.now()}`;
+    try {
+      const response = await fetch(url, { mode: 'cors' });
+      if (!response.ok) throw new Error('API Error');
+      const blob = await response.blob();
+      localBlobUrl = URL.createObjectURL(blob);
+      imgEl.src = localBlobUrl;
+      imgEl.onload = () => {
+        loader.style.display = 'none';
+        imgEl.style.display = 'block';
+        dlBtn.disabled = false;
+      };
+    } catch (err) {
+      loader.innerHTML = "<small style='color:#cc0000;font-family:Sarabun,sans-serif'>โหลดไม่สำเร็จ โปรดลองใหม่อีกครั้ง</small>";
+    }
+  }
+
+  dlBtn.addEventListener('click', () => {
+    if (!localBlobUrl) return;
+    const a = document.createElement('a');
+    a.href = localBlobUrl;
+    a.download = `QR_${Date.now()}.png`;
+    a.click();
+  });
+
+  init();
+})();
+</script>

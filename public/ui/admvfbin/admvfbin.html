@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>ยืนยันการทิ้งขยะ</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --vh: 100dvh;
+  }
+
+  body {
+    font-family: 'Sarabun', sans-serif;
+    background: #000;
+    width: 100%;
+    height: var(--vh);
+    overflow: hidden;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+  }
+
+  .page {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: none;
+    flex-direction: column;
+  }
+  .page.active { display: flex; }
+
+  /* ════ QR SCAN ════ */
+  #header-qr {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 20;
+    background: #2EAC5A;
+    padding-top: calc(14px + var(--sat));
+    padding-bottom: 12px;
+    padding-left: calc(16px + var(--sal));
+    padding-right: calc(16px + var(--sar));
+    text-align: center;
+  }
+  #header-qr h1 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  #header-qr p  { font-size: 14px; color: #fff; font-weight: 400; }
+
+  #reader {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden;
+    background: #000;
+  }
+  #reader video {
+    position: absolute !important;
+    top: 50% !important; left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 100% !important; height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  #scan-hint {
+    position: absolute;
+    bottom: calc(50px + var(--sab));
+    left: calc(20px + var(--sal));
+    right: calc(20px + var(--sar));
+    z-index: 20;
+    background: rgba(40,40,40,0.75);
+    border-radius: 30px;
+    padding: 10px 18px;
+    text-align: center;
+    color: #fff;
+    font-size: 14px;
+    pointer-events: none;
+  }
+
+  #err-wrap {
+    position: absolute;
+    bottom: calc(40px + var(--sab));
+    left: 0; right: 0;
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  #err-msg { color: #ffcdd2; font-size: 14px; text-align: center; padding: 0 24px; }
+  #start-btn {
+    padding: 10px 32px;
+    background: #2EAC5A; color: #fff;
+    font-family: 'Sarabun', sans-serif; font-size: 16px; font-weight: 600;
+    border: none; border-radius: 24px; cursor: pointer;
+  }
+
+  /* ════ BIN TYPE POPUP ════ */
+  #bin-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(0,0,0,0.55);
+    align-items: center;
+    justify-content: center;
+  }
+  #bin-overlay.show { display: flex; }
+
+  #bin-popup {
+    background: #ebebeb;
+    border-radius: 22px;
+    padding: 22px 18px 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    width: min(92vw, 360px);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+    animation: popIn 0.22s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.82); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  #bin-popup h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+    text-align: center;
+  }
+
+  .bin-grid {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .bin-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bin-item:active .bin-icon { transform: scale(0.91); }
+
+  .bin-icon {
+    width: 76px;
+    height: 76px;
+    border-radius: 18px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+  }
+  .bin-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .bin-icon.recycle   { background: #f5c842; }
+  .bin-icon.dangerous { background: #e03030; }
+  .bin-icon.normal    { background: #3a8fd1; }
+  .bin-icon.organic   { background: #5aaa5a; }
+
+  .bin-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #222;
+    text-align: center;
+  }
+
+  #bin-cancel {
+    margin-top: 2px;
+    padding: 9px 36px;
+    background: transparent;
+    border: 1.5px solid #bbb;
+    border-radius: 24px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15px;
+    color: #555;
+    cursor: pointer;
+  }
+
+  /* ════ SUCCESS POPUP ════ */
+  #success-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0,0,0,0.55);
+    align-items: center;
+    justify-content: center;
+  }
+  #success-overlay.show { display: flex; }
+
+  #success-popup {
+    background: #fff;
+    border-radius: 24px;
+    padding: 32px 28px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: min(88vw, 320px);
+    box-shadow: 0 8px 48px rgba(0,0,0,0.3);
+    animation: popIn 0.25s cubic-bezier(.34,1.56,.64,1);
+    text-align: center;
+  }
+
+  .success-icon-wrap {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#2EAC5A,#1e8040);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 18px rgba(46,172,90,0.4);
+  }
+  .success-icon-wrap svg { width: 38px; height: 38px; }
+
+  #success-popup h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  #success-detail {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.7;
+  }
+  #success-detail b { color: #1a1a1a; font-weight: 700; }
+
+  #btn-success-ok {
+    margin-top: 6px;
+    padding: 12px 44px;
+    background: linear-gradient(135deg,#2EAC5A,#1e8040);
+    color: #fff;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(46,172,90,0.35);
+  }
+
+  /* ════════════════════════════════
+     BOTTOM SHEET POPUP SYSTEM
+     (สำหรับ alertBinReuseWarning)
+  ════════════════════════════════ */
+  #sheet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: var(--sab);
+  }
+  #sheet-overlay.visible { display: flex; animation: overlayIn 0.22s ease; }
+
+  @keyframes overlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .popup-sheet {
+    background: #fff;
+    border-radius: 24px 24px 0 0;
+    width: 100%;
+    max-width: 540px;
+    padding: 8px 24px 32px;
+    animation: sheetUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: bottom center;
+  }
+  @keyframes sheetUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .popup-handle {
+    width: 40px; height: 4px;
+    background: #e0e0e0;
+    border-radius: 2px;
+    margin: 10px auto 20px;
+  }
+
+  .popup-icon-wrap {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .popup-icon-wrap.purple { background: #EDE7F6; }
+  .popup-icon-wrap svg { width: 38px; height: 38px; }
+
+  .popup-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: #1a1a1a;
+    text-align: center;
+    margin-bottom: 8px;
+    line-height: 1.35;
+  }
+  .popup-body {
+    font-size: 14px;
+    color: #555;
+    text-align: center;
+    line-height: 1.65;
+    margin-bottom: 24px;
+  }
+  .popup-body b { color: #1a1a1a; font-weight: 700; }
+
+  .popup-btn-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .popup-btn {
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 14px;
+    border: none;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .popup-btn:active { opacity: 0.8; transform: scale(0.98); }
+  .popup-btn.primary   { background: #2EAC5A; color: #fff; }
+  .popup-btn.secondary { background: #F5F5F5; color: #333; }
+  .popup-btn.ghost     { background: transparent; color: #888; font-weight: 500; font-size: 14px; padding: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ PAGE: QR SCAN ══════════ -->
+<div id="page-qr" class="page active">
+  <div id="header-qr">
+    <h1>ยืนยันถังขยะ</h1>
+    <p>โปรดแสกน QR Code ที่ถังขยะเพื่อยืนยันถังขยะใบใหม่</p>
+  </div>
+
+  <div id="reader"></div>
+
+  <div id="scan-hint">กรุณาหันกล้องให้ QR Code อยู่ในกรอบสีเหลี่ยมจตุรัสชัดเจน</div>
+
+  <div id="err-wrap">
+    <div id="err-msg"></div>
+    <button id="start-btn" onclick="startScanner()">เริ่มสแกนใหม่</button>
+  </div>
+</div>
+
+<!-- ══════════ POPUP: เลือกประเภทถังขยะ ══════════ -->
+<div id="bin-overlay">
+  <div id="bin-popup">
+    <h2>โปรดเลือกประเภทถังขยะ</h2>
+    <div class="bin-grid">
+
+      <div class="bin-item" onclick="selectBin('rcc','รีไซเคิล')">
+        <div class="bin-icon recycle">
+          <img src="../../assets/binsyms/recycle.png" alt="รีไซเคิล"
+               onerror="this.style.display='none';this.parentElement.textContent='♻️'">
+        </div>
+        <span class="bin-label">รีไซเคิล</span>
+      </div>
+
+      <div class="bin-item" onclick="selectBin('dgr','อันตราย')">
+        <div class="bin-icon dangerous">
+          <img src="../../assets/binsyms/dangerous.png" alt="อันตราย"
+               onerror="this.style.display='none';this.parentElement.textContent='☢️'">
+        </div>
+        <span class="bin-label">อันตราย</span>
+      </div>
+
+      <div class="bin-item" onclick="selectBin('nm', 'ทั่วไป')">
+        <div class="bin-icon normal">
+          <img src="../../assets/binsyms/normal.png" alt="ทั่วไป"
+               onerror="this.style.display='none';this.parentElement.textContent='🗑️'">
+        </div>
+        <span class="bin-label">ทั่วไป</span>
+      </div>
+
+      <div class="bin-item" onclick="selectBin('ogn','อินทรีย์')">
+        <div class="bin-icon organic">
+          <img src="../../assets/binsyms/organic.png" alt="อินทรีย์"
+               onerror="this.style.display='none';this.parentElement.textContent='🌿'">
+        </div>
+        <span class="bin-label">อินทรีย์</span>
+      </div>
+
+    </div>
+    <button id="bin-cancel" onclick="closeBinPopup()">ยกเลิก</button>
+  </div>
+</div>
+
+<!-- ══════════ POPUP: สำเร็จ ══════════ -->
+<div id="success-overlay">
+  <div id="success-popup">
+    <div class="success-icon-wrap">
+      <svg viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polyline points="8,20 16,28 30,12" stroke="white" stroke-width="3.5"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h2>บันทึกสำเร็จ!</h2>
+    <div id="success-detail"></div>
+    <button id="btn-success-ok" onclick="closeSuccessAndRescan()">รับทราบ</button>
+  </div>
+</div>
+
+<!-- ══════════ BOTTOM SHEET POPUP ══════════ -->
+<div id="sheet-overlay">
+  <div class="popup-sheet">
+    <div class="popup-handle"></div>
+    <div id="sheet-icon-wrap" class="popup-icon-wrap"></div>
+    <div id="sheet-title" class="popup-title"></div>
+    <div id="sheet-body" class="popup-body"></div>
+    <div id="sheet-btn-stack" class="popup-btn-stack"></div>
+  </div>
+</div>
+
+<script>
+  /* ═══════════════ SAFE-AREA FIX ═══════════════ */
+  function applyViewport() {
+    const vp = window.visualViewport;
+    const h = vp ? vp.height : window.innerHeight;
+    document.documentElement.style.setProperty('--vh', h + 'px');
+    if (vp) {
+      const bottomGap = window.innerHeight - (vp.offsetTop + vp.height);
+      document.documentElement.style.setProperty(
+        '--sab',
+        Math.max(bottomGap, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab') || '0')) + 'px'
+      );
+    }
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', applyViewport);
+    window.visualViewport.addEventListener('scroll', applyViewport);
+  }
+  window.addEventListener('resize', applyViewport);
+  applyViewport();
+
+  /* ═══════════════ BOTTOM SHEET SYSTEM ═══════════════ */
+  function _showSheet({ iconHTML, iconColor, title, body, buttons }) {
+    const overlay  = document.getElementById('sheet-overlay');
+    const iconWrap = document.getElementById('sheet-icon-wrap');
+    const titleEl  = document.getElementById('sheet-title');
+    const bodyEl   = document.getElementById('sheet-body');
+    const btnStack = document.getElementById('sheet-btn-stack');
+
+    iconWrap.className = 'popup-icon-wrap ' + (iconColor || 'purple');
+    iconWrap.innerHTML = iconHTML || '';
+    titleEl.innerHTML  = title || '';
+    bodyEl.innerHTML   = body  || '';
+    btnStack.innerHTML = '';
+
+    buttons.forEach(btn => {
+      const el = document.createElement('button');
+      el.className   = 'popup-btn ' + (btn.style || 'primary');
+      el.textContent = btn.label;
+      el.onclick = () => {
+        _closeSheet();
+        if (btn.action) btn.action();
+      };
+      btnStack.appendChild(el);
+    });
+
+    overlay.classList.add('visible');
+  }
+
+  function _closeSheet() {
+    document.getElementById('sheet-overlay').classList.remove('visible');
+  }
+
+  /* ═══════════════ ALERT FUNCTION ═══════════════ */
+
+  /**
+   * alertBinReuseWarning
+   * แจ้งว่า QR Code นี้ถูกใช้ลงทะเบียนถังขยะไปแล้ว
+   */
+  function alertBinReuseWarning() {
+    _showSheet({
+      iconColor: 'purple',
+      iconHTML: `
+        <svg viewBox="0 0 24 24" fill="none" stroke="#7E57C2" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          <circle cx="12" cy="16" r="1.5" fill="#7E57C2" stroke="none"/>
+          <line x1="12" y1="16" x2="12" y2="18.5"/>
+        </svg>`,
+      title: 'QR Code นี้ถูกใช้ไปแล้ว',
+      body: `QR Code นี้<b>ถูกลงทะเบียนถังขยะไปแล้ว</b><br>
+             ไม่สามารถนำมาใช้ซ้ำได้<br>
+             กรุณาลงทะเบียน QR Code ของถังขยะ<b>ใบใหม่</b>`,
+      buttons: [
+        {
+          label: 'ลงทะเบียน QR Code ใหม่',
+          style: 'primary',
+          action: () => { startScanner(); }
+        },
+        {
+          label: 'แสกนใหม่',
+          style: 'secondary',
+          action: () => { window.location.href = 'https://promptting.web.app'; }
+        },
+        
+      ]
+    });
+  }
+
+  /* ═══════════════ STATE ═══════════════ */
+  let html5QrCode = null;
+  let scanning    = false;
+  let lastQRCode  = null;
+  let binId = null;
+
+  /* ═══════════════ SCANNER ═══════════════ */
+  function showError(msg) {
+    document.getElementById('err-msg').textContent = msg;
+    document.getElementById('err-wrap').style.display = 'flex';
+    document.getElementById('scan-hint').style.display = 'none';
+  }
+  function hideError() {
+    document.getElementById('err-wrap').style.display = 'none';
+    document.getElementById('scan-hint').style.display = 'block';
+  }
+
+  function onScanSuccess(decodedText) {
+    if (!scanning) return;
+    scanning    = false;
+    lastQRCode  = decodedText;
+    const proceed = () => handleScanSuccess();
+    html5QrCode.stop().then(proceed).catch(proceed);
+  }
+
+  function startScanner() {
+    hideError();
+    if (!html5QrCode) html5QrCode = new Html5Qrcode("reader", { verbose: false });
+    Html5Qrcode.getCameras().then(cameras => {
+      if (!cameras || cameras.length === 0) { showError('ไม่พบกล้อง'); return; }
+      const backCam = cameras.find(c => c.label && /back|rear|environment/i.test(c.label));
+      const camId   = backCam ? backCam.id : cameras[cameras.length - 1].id;
+      const config  = {
+        fps: 15,
+        qrbox: { width: 220, height: 220 },
+        aspectRatio: window.innerHeight / window.innerWidth,
+        videoConstraints: { deviceId: { exact: camId }, facingMode: { ideal: 'environment' } }
+      };
+      scanning = true;
+      html5QrCode.start(camId, config, onScanSuccess, () => {})
+        .catch(() => { scanning = false; showError('ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตและลองใหม่'); });
+    }).catch(() => { showError('กรุณาอนุญาตการเข้าถึงกล้อง'); });
+  }
+
+  /* ═══════════════ BIN POPUP ═══════════════ */
+  function showBinPopup() {
+    document.getElementById('bin-overlay').classList.add('show');
+  }
+
+  function closeBinPopup() {
+    document.getElementById('bin-overlay').classList.remove('show');
+    setTimeout(startScanner, 300);
+  }
+
+  function selectBin(binId, binType) {
+    binId = binId;
+    document.getElementById('bin-overlay').classList.remove('show');
+    document.getElementById('success-detail').innerHTML =
+      'ประเภทถัง: <b>' + binType + '</b>';
+    document.getElementById('success-overlay').classList.add('show');
+  }
+
+  /* ═══════════════ SUCCESS POPUP ═══════════════ */
+  function closeSuccessAndRescan() {
+    document.getElementById('success-overlay').classList.remove('show');
+    lastQRCode = null;
+    window.location.replace("https://promptting.web.app?redirect_mnbin=true");
+  }
+
+  // Handlers Helper
+  function handleScanSuccess(){
+    //lastQRCode
+    showBinPopup();
+    //binId
+  }
+
+  function handleEndProcess(){
+    
+  }
+
+  // alertBinReuseWarning
+
+
+  /* ═══════════════ INIT ═══════════════ */
+  window.addEventListener('load', () => setTimeout(startScanner, 400));
+</script>
+</body>
+</html>

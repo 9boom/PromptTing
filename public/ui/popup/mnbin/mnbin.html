@@ -72,7 +72,7 @@
 
   <!-- เพิ่มคิวอาร์โค้ด -->
   <div class="btn-item">
-    <div class="btn-icon">
+    <div class="btn-icon" onclick="openPopup('qrgen')">
       <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
         <rect x="20" y="6" width="4" height="32" rx="2"/>
         <rect x="6" y="20" width="32" height="4" rx="2"/>
@@ -83,7 +83,7 @@
 
   <!-- ยืนยันถัง -->
   <div class="btn-item">
-    <div class="btn-icon">
+    <div class="btn-icon" onclick="openAdminBinVerify()">
       <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
         <rect x="4" y="4" width="13" height="13" rx="2" fill="none" stroke="white" stroke-width="3"/>
         <rect x="7" y="7" width="7" height="7" rx="1"/>
@@ -125,5 +125,8 @@
     console.log("DEBUG: M menu injected");
     function openDashboard(){
       window.open("ui/dashboard/dashboard.html", "_self");
+    }
+    function openAdminBinVerify(){
+      window.open("ui/admvfbin/admvfbin.html", "_self");
     }
 </script>
