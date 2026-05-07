@@ -1,6 +1,4 @@
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
-
   :root {
     --green: #2b9e5e;
     --green-dark: #239356;
@@ -12,23 +10,13 @@
     --text-muted: #888888;
   }
 
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.60);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 16px;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
-  }
 
   .modal-card {
     width: min(100%, 360px);
     max-height: 92vh;
+    margin: auto;
     overflow-y: auto;
     scrollbar-width: none;
     background: #ffffff;
@@ -234,8 +222,6 @@
     .poster-preview { max-height: 280px; }
   }
 </style>
-
-<div class="modal-overlay" id="my-popup">
   <div class="modal-card">
 
     <div class="modal-header">
@@ -294,7 +280,6 @@
     </div>
 
   </div>
-</div>
 
 <script>
 (function() {

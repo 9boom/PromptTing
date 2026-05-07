@@ -1,91 +1,363 @@
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Sarabun',sans-serif;background:#1a1a1a;min-height:100vh;display:flex;align-items:center;justify-content:center;}
-  .leaderboard-popup{background:#f0f0f0;border-radius:20px;width:340px;overflow:hidden;position:relative;}
-  .popup-body{padding:20px 16px 16px;}
-  .header{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
-  .bar-icon{display:flex;align-items:flex-end;gap:3px;height:28px;}
-  .bar-icon span{background:#2e7d32;border-radius:2px;display:block;}
-  .bar-icon span:nth-child(1){width:7px;height:14px;}
-  .bar-icon span:nth-child(2){width:7px;height:22px;}
-  .bar-icon span:nth-child(3){width:7px;height:10px;}
-  .header h2{font-size:20px;font-weight:700;color:#222;}
-  .close-btn{position:absolute;top:12px;right:12px;width:38px;height:38px;background:#e53935;border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-  .close-btn svg{width:18px;height:18px;stroke:#fff;stroke-width:2.5;fill:none;}
-  .list{display:flex;flex-direction:column;gap:8px;}
-  .row{background:#e8e8e8;border-radius:12px;display:flex;align-items:center;padding:10px 12px;gap:10px;}
-  .row.active{background:#d0d0d0;border:2px solid #aaa;}
-  .rank-num{font-size:17px;font-weight:700;color:#333;width:18px;text-align:center;}
-  .rank-num.gold{color:#d4a017;}
-  .avatar{width:42px;height:42px;border-radius:50%;background:#bbb;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
-  .info{flex:1;}
-  .info .name{font-size:14px;font-weight:700;color:#222;}
-  .info .pts{font-size:12px;color:#555;}
-  .medal{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
-  .medal.gold{background:#ffd700;}
-  .medal.silver{background:#c0c0c0;}
-  .medal.bronze{background:#cd7f32;}
-  .medal-num{font-size:13px;font-weight:900;}
-  .footer{background:#2e7d32;padding:12px 16px;display:flex;align-items:center;gap:12px;}
-  .footer-avatar{width:44px;height:44px;border-radius:50%;background:#1b5e20;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
-  .footer-info .name{font-size:15px;font-weight:700;color:#fff;}
-  .footer-info .rank{font-size:13px;color:#a5d6a7;}
-  .footer-exp{margin-left:auto;text-align:right;}
-  .footer-exp .label{font-size:12px;color:#a5d6a7;}
-  .footer-exp .val{font-size:22px;font-weight:700;color:#fff;}
-</style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-<div class="leaderboard-popup">
-  <div class="popup-body">
-    <div class="header">
-      <div class="bar-icon"><span></span><span></span><span></span></div>
-      <h2>ตารางอันดับ</h2>
+    .leaderboard-popup {
+      background: #f0f0f0;
+      border-radius: 20px;
+      width: 340px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    }
+
+    .popup-body { padding: 20px 16px 16px; }
+
+    .header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .bar-icon { display: flex; align-items: flex-end; gap: 3px; height: 28px; }
+    .bar-icon span { background: #2e7d32; border-radius: 2px; display: block; }
+    .bar-icon span:nth-child(1) { width: 7px; height: 14px; }
+    .bar-icon span:nth-child(2) { width: 7px; height: 22px; }
+    .bar-icon span:nth-child(3) { width: 7px; height: 10px; }
+    .header h2 { font-size: 20px; font-weight: 700; color: #222; }
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+    #refresh-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #ccc; transition: background 0.3s; flex-shrink: 0;
+    }
+    #refresh-dot.syncing { background: #f9a825; animation: pulse-dot 0.6s ease-in-out infinite alternate; }
+    #refresh-dot.ok      { background: #43a047; }
+    #refresh-dot.error   { background: #e53935; }
+    @keyframes pulse-dot { from { opacity: 0.4; } to { opacity: 1; } }
+
+    .close-btn {
+      width: 38px; height: 38px;
+      background: #e53935; border: none; border-radius: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .close-btn svg { width: 18px; height: 18px; stroke: #fff; stroke-width: 2.5; fill: none; }
+
+    .list-wrapper {
+      position: relative;
+      /* fade mask ด้านบน-ล่างบอกว่า scroll ได้ */
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 28px, black calc(100% - 28px), transparent 100%);
+      mask-image: linear-gradient(to bottom, transparent 0%, black 28px, black calc(100% - 28px), transparent 100%);
+    }
+    .list {
+      display: flex; flex-direction: column; gap: 8px;
+      height: 260px;          /* ความสูงคงที่ — ปรับตามต้องการ */
+      overflow-y: auto;
+      padding: 6px 2px;       /* เว้นขอบให้ fade mask มีที่แสดง */
+      scrollbar-width: thin;
+      scrollbar-color: #ccc transparent;
+    }
+    .list::-webkit-scrollbar { width: 4px; }
+    .list::-webkit-scrollbar-track { background: transparent; }
+    .list::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+
+    .row {
+      background: #e8e8e8; border-radius: 12px;
+      display: flex; align-items: center; padding: 10px 12px; gap: 10px;
+      transition: background 0.3s, border 0.3s;
+      border: 2px solid transparent;
+    }
+    .row.active { background: #d7f0d7; border: 2px solid #66bb6a; }
+    .row.entering { animation: rowSlideIn 0.3s ease-out; }
+    @keyframes rowSlideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .rank-num { font-size: 17px; font-weight: 700; color: #333; width: 22px; text-align: center; flex-shrink: 0; }
+    .rank-num.gold   { color: #d4a017; }
+    .rank-num.silver { color: #808080; }
+    .rank-num.bronze { color: #a0522d; }
+
+    .avatar {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: #bbb; display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+
+    .info { flex: 1; min-width: 0; }
+    .info .name { font-size: 14px; font-weight: 700; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .info .pts  { font-size: 12px; color: #555; }
+    .info .you-badge {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      background: #2e7d32; color: #fff;
+      border-radius: 4px; padding: 1px 5px; margin-left: 5px; vertical-align: middle;
+    }
+
+    .medal { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .medal.gold   { background: #ffd700; }
+    .medal.silver { background: #c0c0c0; }
+    .medal.bronze { background: #cd7f32; }
+
+    .empty-state { text-align: center; padding: 20px; color: #999; font-size: 13px; }
+
+    .footer { background: #2e7d32; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+    .footer-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: #1b5e20; display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .footer-info .name { font-size: 15px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .footer-info .rank { font-size: 13px; color: #a5d6a7; }
+    .footer-info .rank.not-ranked { color: #ef9a9a; }
+    .footer-exp { margin-left: auto; text-align: right; flex-shrink: 0; }
+    .footer-exp .label { font-size: 12px; color: #a5d6a7; }
+    .footer-exp .val   { font-size: 22px; font-weight: 700; color: #fff; }
+
+    .lb_edit_trigger {
+      background: rgba(255,255,255,0.15); border: none; border-radius: 6px;
+      width: 26px; height: 26px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: background 0.2s;
+    }
+    .lb_edit_trigger:hover { background: rgba(255,255,255,0.3); }
+    .lb_edit_trigger svg { width: 14px; height: 14px; fill: #fff; }
+
+    #lb_overlay_container {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255,255,255,0.98);
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 100; padding: 25px; text-align: center;
+      animation: lbFadeIn 0.2s ease-out;
+    }
+    @keyframes lbFadeIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+    #lb_overlay_container h3 { color: #2e7d32; margin-bottom: 15px; font-size: 18px; font-weight: 700; }
+    .lb_input_box { width: 100%; margin-bottom: 20px; }
+    .lb_text_input {
+      width: 100%; padding: 14px;
+      border: 2px solid #ddd; border-radius: 12px;
+      font-family: inherit; font-size: 16px; text-align: center; outline: none;
+      transition: border-color 0.3s;
+    }
+    .lb_text_input:focus { border-color: #2e7d32; }
+    .lb_counter_text { font-size: 12px; color: #888; margin-top: 8px; display: block; text-align: right; }
+    .lb_button_group { display: flex; gap: 10px; width: 100%; }
+    .lb_action_btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; font-family: inherit; font-size: 15px; }
+    .lb_btn_confirm { background: #2e7d32; color: #fff; }
+    .lb_btn_dismiss { background: #eee; color: #666; }
+  </style>
+
+  <div class="leaderboard-popup">
+
+    <div id="lb_overlay_container">
+      <h3>ตั้งชื่อใหม่ของคุณ</h3>
+      <div class="lb_input_box">
+        <input type="text" id="lb_input_field" class="lb_text_input" placeholder="ใส่ชื่อใหม่..." maxlength="10">
+        <span class="lb_counter_text"><span id="lb_char_count_val">0</span>/10</span>
+      </div>
+      <div class="lb_button_group">
+        <button class="lb_action_btn lb_btn_dismiss" onclick="LB_NAME_MANAGER.closeModal()">ยกเลิก</button>
+        <button class="lb_action_btn lb_btn_confirm" onclick="LB_NAME_MANAGER.saveName()">บันทึก</button>
+      </div>
     </div>
-    <button class="close-btn" onclick="window.closePopup()">
-      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-    </button>
-    <div class="list">
-      <div class="row">
-        <span class="rank-num gold">1</span>
-        <div class="avatar">🦊</div>
-        <div class="info"><div class="name">green_hero_01</div><div class="pts">150 แต้ม</div></div>
-        <div class="medal gold"><span class="medal-num" style="color:#7a5800;">①</span></div>
+
+    <div class="popup-body">
+      <div class="header">
+        <div class="bar-icon"><span></span><span></span><span></span></div>
+        <h2>ตารางอันดับ</h2>
+        <div class="header-right">
+          <div id="refresh-dot" title="สถานะการซิงค์"></div>
+          <button class="close-btn" onclick="window.closePopup && window.closePopup()">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
       </div>
-      <div class="row">
-        <span class="rank-num">2</span>
-        <div class="avatar">🐔</div>
-        <div class="info"><div class="name">สมชายสายรักษ์โลก</div><div class="pts">117 แต้ม</div></div>
-        <div class="medal silver"><span class="medal-num" style="color:#555;">②</span></div>
-      </div>
-      <div class="row">
-        <span class="rank-num">3</span>
-        <div class="avatar">🐷</div>
-        <div class="info"><div class="name">Technoblade</div><div class="pts">60 แต้ม</div></div>
-        <div class="medal bronze"><span class="medal-num" style="color:#5c3000;">③</span></div>
-      </div>
-      <div class="row active">
-        <span class="rank-num">4</span>
-        <div class="avatar">🐱</div>
-        <div class="info"><div class="name">ชอบแมว</div><div class="pts">45 แต้ม</div></div>
+      <div class="list-wrapper">
+        <div class="list" id="lb_list">
+          <div class="empty-state">กำลังโหลดข้อมูล...</div>
+        </div>
       </div>
     </div>
+
+    <div class="footer">
+      <div class="footer-avatar" id="lb_footer_avatar">🐱</div>
+      <div class="footer-info">
+        <div class="name">
+          <span id="lb_target_name_footer">–</span>
+          <span style="font-weight:400; opacity:0.7; font-size:13px;">(คุณ)</span>
+          <button class="lb_edit_trigger" onclick="LB_NAME_MANAGER.openModal()" title="เปลี่ยนชื่อ">
+            <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+        </div>
+        <div class="rank" id="lb_footer_rank">–</div>
+      </div>
+      <div class="footer-exp">
+        <div class="label">EXP ของคุณ</div>
+        <div class="val" id="lb_footer_exp">–</div>
+      </div>
+    </div>
+
   </div>
-  <div class="footer">
-    <div class="footer-avatar">🐱</div>
-    <div class="footer-info">
-      <div class="name">ชอบแมว (คุณ)</div>
-      <div class="rank">อันดับที่ 4</div>
-    </div>
-    <div class="footer-exp">
-      <div class="label">EXP ของคุณ</div>
-      <div class="val">45</div>
-    </div>
-  </div>
-</div>
 
 <script>
-  (function(){
-    console.log("Hello")
-  })();
+  // ─── CONFIG ───────────────────────────────
+  var API_URL         = 'http://127.0.0.1:8080/fetch_users';
+  var POLL_MS         = 10000;
 
+  // TODO: เปลี่ยนเป็น localStorage.getItem('userID') ในระบบจริง
+  var CURRENT_USER_ID = 'user_003';
+
+  // ─── HELPERS ──────────────────────────────
+  var AVATARS = ['🦊','🐔','🐷','🐱','🐻','🐼','🐨','🦁','🐯','🐸','🐺','🦄'];
+  function getAvatar(userID) {
+    let hash = 0;
+    for (let c of userID) hash = (hash * 31 + c.charCodeAt(0)) & 0xffff;
+    return AVATARS[hash % AVATARS.length];
+  }
+  function escapeHTML(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  var MEDALS   = [{ emoji:'🥇', cls:'gold' }, { emoji:'🥈', cls:'silver' }, { emoji:'🥉', cls:'bronze' }];
+  var RANK_CLS = ['gold', 'silver', 'bronze'];
+  var dotEl    = document.getElementById('refresh-dot');
+
+  // ─── updateLeaderboard(users) ─────────────
+  function updateLeaderboard(users) {
+    const listEl = document.getElementById('lb_list');
+
+    if (!Array.isArray(users) || users.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">ยังไม่มีข้อมูลผู้เล่น</div>';
+      return;
+    }
+
+    // บันทึก scroll position ก่อน render ใหม่
+    const savedScroll = listEl.scrollTop;
+
+    const sorted  = [...users].sort((a, b) => b.userExp - a.userExp);
+    const myIndex = sorted.findIndex(u => u.userID === CURRENT_USER_ID);
+    const myData  = myIndex !== -1 ? sorted[myIndex] : null;
+
+    listEl.innerHTML = '';
+
+    sorted.forEach((user, i) => {
+      const rank     = i + 1;
+      const isMe     = user.userID === CURRENT_USER_ID;
+      const rankCls  = RANK_CLS[i] ? ` ${RANK_CLS[i]}` : '';
+      const medal    = rank <= 3 ? `<div class="medal ${MEDALS[i].cls}">${MEDALS[i].emoji}</div>` : '';
+      const youBadge = isMe ? '<span class="you-badge">คุณ</span>' : '';
+
+      const row = document.createElement('div');
+      row.className = 'row' + (isMe ? ' active' : '');
+      row.innerHTML = `
+        <span class="rank-num${rankCls}">${rank}</span>
+        <div class="avatar">${getAvatar(user.userID)}</div>
+        <div class="info">
+          <div class="name">${escapeHTML(user.userName)}${youBadge}</div>
+          <div class="pts">${user.userExp.toLocaleString()} แต้ม</div>
+        </div>
+        ${medal}`;
+      listEl.appendChild(row);
+    });
+
+    // คืน scroll position หลัง render
+    listEl.scrollTop = savedScroll;
+
+    updateFooter(myData, myIndex);
+  }
+
+  // ─── Footer ───────────────────────────────
+  function updateFooter(myData, myIndex) {
+    const nameEl   = document.getElementById('lb_target_name_footer');
+    const rankEl   = document.getElementById('lb_footer_rank');
+    const expEl    = document.getElementById('lb_footer_exp');
+    const avatarEl = document.getElementById('lb_footer_avatar');
+
+    if (!myData) {
+      nameEl.textContent   = 'ไม่พบข้อมูล';
+      rankEl.textContent   = 'ไม่ติดอันดับ';
+      rankEl.className     = 'rank not-ranked';
+      expEl.textContent    = '–';
+      avatarEl.textContent = '❓';
+      return;
+    }
+    nameEl.textContent   = myData.userName;
+    expEl.textContent    = myData.userExp.toLocaleString();
+    avatarEl.textContent = getAvatar(myData.userID);
+    rankEl.textContent   = `อันดับที่ ${myIndex + 1}`;
+    rankEl.className     = 'rank';
+  }
+
+  // ─── Polling ──────────────────────────────
+  async function fetchAndUpdate() {
+    dotEl.className = 'syncing';
+    try {
+      const res   = await fetch(API_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data  = await res.json();
+      const users = Array.isArray(data) ? data : (data.users || []);
+      updateLeaderboard(users);
+      dotEl.className = 'ok';
+    } catch (err) {
+      dotEl.className = 'error';
+      console.warn('[LB] fetch error:', err);
+    }
+  }
+
+
+fetchAndUpdate();
+window.__popupCleanup = (function () {
+  var id = setInterval(fetchAndUpdate, POLL_MS);
+  return function () {
+    clearInterval(id);
+    console.log('DEBUG: Clear interval');
+  };
+})();
+
+  // ─── Name Manager ─────────────────────────
+  var LB_NAME_MANAGER = {
+    ui: {
+      overlay:           document.getElementById('lb_overlay_container'),
+      input:             document.getElementById('lb_input_field'),
+      charCount:         document.getElementById('lb_char_count_val'),
+      footerDisplayName: document.getElementById('lb_target_name_footer'),
+    },
+    openModal() {
+      const { overlay, input, footerDisplayName } = this.ui;
+      overlay.style.display = 'flex';
+      input.value = footerDisplayName.innerText;
+      this.updateCounter();
+      setTimeout(() => input.focus(), 50);
+    },
+    closeModal() { this.ui.overlay.style.display = 'none'; },
+    updateCounter() { this.ui.charCount.innerText = this.ui.input.value.length; },
+    saveName() {
+      const { input, footerDisplayName } = this.ui;
+      const cleanName = input.value.trim();
+      if (cleanName !== '') {
+        footerDisplayName.innerText = cleanName;
+        handleNewName(cleanName);
+        this.closeModal();
+      } else {
+        alert('กรุณาระบุชื่ออย่างน้อย 1 ตัวอักษร');
+      }
+    },
+    setup() {
+      const { input } = this.ui;
+      if (!input) return;
+      input.addEventListener('input', () => this.updateCounter());
+      input.addEventListener('keypress', e => { if (e.key === 'Enter') this.saveName(); });
+    }
+  };
+
+  function handleNewName(name) {
+    console.log('🔥 [LB] บันทึกชื่อใหม่:', name);
+    // fetch('/api/update-name', { method: 'PATCH', body: JSON.stringify({ userID: CURRENT_USER_ID, userName: name }) })
+  }
+
+  LB_NAME_MANAGER.setup();
 </script>

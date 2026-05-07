@@ -347,6 +347,54 @@
   .popup-btn.primary   { background: #2EAC5A; color: #fff; }
   .popup-btn.secondary { background: #F5F5F5; color: #333; }
   .popup-btn.ghost     { background: transparent; color: #888; font-weight: 500; font-size: 14px; padding: 10px; }
+
+  /* ════════════════════════════════
+   GENERAL LOADING (minimal)
+════════════════════════════════ */
+#general-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 998;
+  background: rgba(0, 0, 0, 0.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  /* ป้องกันการแตะ/คลิกใดๆ */
+  pointer-events: all;
+  touch-action: none;
+}
+#general-loading-overlay.visible {
+  display: flex;
+}
+
+.general-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Single clean ring */
+.general-spinner {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #ffffff;
+  animation: generalSpin 0.75s linear infinite;
+}
+
+@keyframes generalSpin {
+  to { transform: rotate(360deg); }
+}
+
+.general-loading-label {
+  font-family: 'Sarabun', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.88);
+  letter-spacing: 0.02em;
+}
 </style>
 </head>
 <body>
@@ -434,6 +482,14 @@
     <div id="sheet-title" class="popup-title"></div>
     <div id="sheet-body" class="popup-body"></div>
     <div id="sheet-btn-stack" class="popup-btn-stack"></div>
+  </div>
+</div>
+
+<!-- ══════════ GENERAL LOADING OVERLAY ══════════ -->
+<div id="general-loading-overlay">
+  <div class="general-loading-card">
+    <div class="general-spinner"></div>
+    <div class="general-loading-label">กำลังโหลด...</div>
   </div>
 </div>
 
@@ -595,6 +651,20 @@
     lastQRCode = null;
     window.location.replace("https://promptting.web.app?redirect_mnbin=true");
   }
+
+  /* ═══════════════════════════════════════
+   GENERAL LOADING ANIMATION
+═══════════════════════════════════════ */
+function showGeneralLoadingAnimation(label) {
+  const overlay = document.getElementById('general-loading-overlay');
+  const labelEl = overlay.querySelector('.general-loading-label');
+  if (labelEl) labelEl.textContent = label || 'กำลังโหลด...';
+  overlay.classList.add('visible');
+}
+
+function stopGeneralLoadingAnimation() {
+  document.getElementById('general-loading-overlay').classList.remove('visible');
+}
 
   // Handlers Helper
   function handleScanSuccess(){

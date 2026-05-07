@@ -132,12 +132,15 @@
       width: clamp(52px, 7.5vw, 66px);
       height: clamp(52px, 7.5vw, 66px);
       border-radius: 50%;
-      background: #fff;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.22);
+      background: none;
+      box-shadow: none;
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
     }
+    .rbtn:active .rbtn-circle { transform: scale(0.93); }
+    .rbtn-circle { transition: transform 0.1s; }
     .rbtn-label {
       font-size: clamp(10px, 1.5vw, 12px);
       font-weight: 600;
@@ -185,13 +188,16 @@
     #mybin-btn .icon-box {
       width: clamp(52px, 7vw, 62px);
       height: clamp(52px, 7vw, 62px);
-      background: #fff;
+      background: none;
       border-radius: 15px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      box-shadow: none;
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: transform 0.1s;
     }
+    #mybin-btn:active .icon-box { transform: scale(0.93); }
     #mybin-btn span {
       font-size: clamp(10px, 1.4vw, 11.5px);
       font-weight: 600;
@@ -389,6 +395,32 @@
     .sheet-btn.primary   { background: #0ba06b; color: #fff; }
     .sheet-btn.secondary { background: #F5F5F5; color: #333; }
     .sheet-btn.ghost     { background: transparent; color: #888; font-weight: 500; font-size: 14px; padding: 10px; }
+
+    /* แอนิเมชันเด้งไปมา (Fast Bounce) */
+@keyframes fastBounceIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  40% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(0.9);
+  }
+  80% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* คลาสที่จะเอาไปใช้กับ #popup-container */
+.popup-bounce {
+  animation: fastBounceIn 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
   </style>
 </head>
 <body>
@@ -417,13 +449,19 @@
     <!-- ตารางอันดับ -->
     <button class="rbtn" onclick="openLeaderboard()">
       <div class="rbtn-circle">
-        <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
-          <path d="M6 28 L9.5 14 L15 21 L19 7 L23 21 L28.5 14 L32 28 Z" fill="#F9A825" stroke="#E65100" stroke-width="1.2" stroke-linejoin="round"/>
-          <rect x="6" y="28" width="26" height="5" rx="2.5" fill="#F9A825" stroke="#E65100" stroke-width="1"/>
-          <circle cx="19" cy="7" r="2.8" fill="#FFF9C4" stroke="#E65100" stroke-width="0.8"/>
-          <circle cx="9.5" cy="14" r="2" fill="#FFF9C4" stroke="#E65100" stroke-width="0.6"/>
-          <circle cx="28.5" cy="14" r="2" fill="#FFF9C4" stroke="#E65100" stroke-width="0.6"/>
-        </svg>
+        <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none">
+    <circle cx="50" cy="50" r="50" fill="#F0EDE8"/>
+    <circle cx="50" cy="50" r="47" fill="none" stroke="#DDD8D0" stroke-width="1.5"/>
+    <!-- crown base -->
+    <polygon points="22,62 30,38 42,52 50,28 58,52 70,38 78,62" fill="#F9A825"/>
+    <polygon points="22,62 30,38 42,52 50,28 58,52 70,38 78,62" fill="none" stroke="#E65100" stroke-width="1.5" stroke-linejoin="round"/>
+    <!-- crown rim -->
+    <rect x="22" y="62" width="56" height="11" rx="4" fill="#F9A825" stroke="#E65100" stroke-width="1.2"/>
+    <!-- jewel dots -->
+    <circle cx="50" cy="30" r="5" fill="#FFF9C4" stroke="#E65100" stroke-width="1"/>
+    <circle cx="30" cy="40" r="3.5" fill="#FFF9C4" stroke="#E65100" stroke-width="0.8"/>
+    <circle cx="70" cy="40" r="3.5" fill="#FFF9C4" stroke="#E65100" stroke-width="0.8"/>
+  </svg>
       </div>
       <span class="rbtn-label">ตารางอันดับ</span>
     </button>
@@ -431,17 +469,24 @@
     <!-- ภารกิจ -->
     <button class="rbtn" onclick="openMission()">
       <div class="rbtn-circle">
-        <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
-          <!-- clipboard -->
-          <rect x="8" y="9" width="22" height="25" rx="3" fill="#EF9F27" stroke="#BA7517" stroke-width="1.2"/>
-          <rect x="14" y="5.5" width="10" height="7" rx="2.5" fill="#BA7517"/>
-          <line x1="12" y1="18" x2="21" y2="18" stroke="#7B4408" stroke-width="2" stroke-linecap="round"/>
-          <line x1="12" y1="22" x2="21" y2="22" stroke="#7B4408" stroke-width="2" stroke-linecap="round"/>
-          <!-- red refresh badge -->
-          <circle cx="26" cy="27" r="7" fill="#E53935"/>
-          <path d="M23.2 27.5 A3.2 3.2 0 1 1 26 30.8" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
-          <polygon points="26,30.8 24,32.5 24.5,29.8" fill="white"/>
-        </svg>
+  <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none">
+    <circle cx="50" cy="50" r="50" fill="#F28B82"/>
+<circle cx="50" cy="50" r="47" fill="none" stroke="#E57373" stroke-width="1.5"/>
+    <!-- clipboard body -->
+    <rect x="24" y="24" width="42" height="52" rx="5" fill="#C62828"/>
+    <rect x="24" y="24" width="42" height="52" rx="5" fill="none" stroke="#B71C1C" stroke-width="1.2"/>
+    <!-- top clip -->
+    <rect x="37" y="18" width="16" height="12" rx="3" fill="#B71C1C"/>
+    <rect x="39" y="20" width="12" height="8" rx="2" fill="#E53935"/>
+    <!-- lines on clipboard -->
+    <line x1="32" y1="40" x2="56" y2="40" stroke="#EF9A9A" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="32" y1="50" x2="56" y2="50" stroke="#EF9A9A" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="32" y1="60" x2="48" y2="60" stroke="#EF9A9A" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- refresh badge -->
+    <circle cx="70" cy="72" r="18" fill="#D32F2F" stroke="#B71C1C" stroke-width="1.5"/>
+    <path d="M62 72 A9 9 0 1 1 70 81" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <polygon points="70,81 64,87 64,76" fill="white"/>
+  </svg>
       </div>
       <span class="rbtn-label">ภารกิจ</span>
     </button>
@@ -449,20 +494,21 @@
     <!-- เหรียญ -->
     <button class="rbtn" onclick="openBadge()">
       <div class="rbtn-circle">
-        <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
-          <!-- light blue circle bg -->
-          <circle cx="19" cy="19" r="15" fill="#E3F2FD"/>
-          <!-- tree trunk -->
-          <rect x="17.5" y="26" width="3" height="7" rx="1.5" fill="#795548"/>
-          <!-- tree layers -->
-          <ellipse cx="19" cy="21" rx="7.5" ry="9" fill="#1B5E20"/>
-          <ellipse cx="19" cy="19" rx="6" ry="7.5" fill="#2E7D32"/>
-          <ellipse cx="19" cy="17" rx="4.5" ry="6" fill="#43A047"/>
-          <ellipse cx="19" cy="15" rx="3" ry="4.5" fill="#66BB6A"/>
-          <!-- shine -->
-          <ellipse cx="16.5" cy="13" rx="1.8" ry="2.2" fill="#A5D6A7" opacity="0.55"/>
-        </svg>
-      </div>
+  <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none">
+    <circle cx="50" cy="50" r="50" fill="#BBDEFB"/>
+    <circle cx="50" cy="50" r="47" fill="none" stroke="#90CAF9" stroke-width="1.5"/>
+    <!-- tree trunk -->
+    <rect x="45" y="70" width="10" height="15" rx="3" fill="#5D4037"/>
+    <!-- tree layers bottom to top -->
+    <ellipse cx="50" cy="65" rx="20" ry="16" fill="#1B5E20"/>
+    <ellipse cx="50" cy="58" rx="17" ry="14" fill="#2E7D32"/>
+    <ellipse cx="50" cy="50" rx="14" ry="13" fill="#388E3C"/>
+    <ellipse cx="50" cy="43" rx="11" ry="11" fill="#43A047"/>
+    <ellipse cx="50" cy="36" rx="8" ry="9" fill="#66BB6A"/>
+    <!-- shine -->
+    <ellipse cx="43" cy="31" rx="4" ry="5" fill="#A5D6A7" opacity="0.6"/>
+  </svg>
+</div>
       <span class="rbtn-label">เหรียญ</span>
     </button>
 
@@ -491,23 +537,25 @@
 
     <button id="mybin-btn" onclick="openMyBinMenu()">
       <div class="icon-box">
-        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-          <!-- handle -->
-          <rect x="14" y="6" width="9" height="4" rx="2" fill="#2E7D32"/>
-          <!-- lid -->
-          <rect x="8" y="9" width="20" height="5.5" rx="2" fill="#388E3C"/>
-          <!-- body -->
-          <rect x="7" y="14" width="22" height="19" rx="3" fill="#4CAF50"/>
-          <!-- lines -->
-          <line x1="13" y1="18" x2="13" y2="29" stroke="white" stroke-width="2" stroke-linecap="round"/>
-          <line x1="18" y1="18" x2="18" y2="29" stroke="white" stroke-width="2" stroke-linecap="round"/>
-          <line x1="23" y1="18" x2="23" y2="29" stroke="white" stroke-width="2" stroke-linecap="round"/>
-          <!-- plus badge -->
-          <circle cx="30" cy="30" r="8" fill="#E53935"/>
-          <line x1="30" y1="26" x2="30" y2="34" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-          <line x1="26" y1="30" x2="34" y2="30" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-        </svg>
-      </div>
+  <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none">
+    <rect x="0" y="0" width="100" height="100" rx="15" fill="#2E7D32"/>
+    <!-- handle -->
+    <rect x="36" y="8" width="28" height="10" rx="5" fill="#1B5E20"/>
+    <!-- lid -->
+    <rect x="16" y="17" width="68" height="15" rx="5" fill="#388E3C"/>
+    <!-- body -->
+    <rect x="20" y="32" width="60" height="46" rx="6" fill="#FFFFFF" opacity="0.15"/>
+    <rect x="20" y="32" width="60" height="46" rx="6" fill="none" stroke="white" stroke-width="2" opacity="0.6"/>
+    <!-- vertical lines -->
+    <line x1="36" y1="40" x2="36" y2="70" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+    <line x1="50" y1="40" x2="50" y2="70" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+    <line x1="64" y1="40" x2="64" y2="70" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+    <!-- red plus badge -->
+    <circle cx="76" cy="76" r="18" fill="#E53935"/>
+    <line x1="76" y1="67" x2="76" y2="85" stroke="white" stroke-width="4" stroke-linecap="round"/>
+    <line x1="67" y1="76" x2="85" y2="76" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+</div>
       <span>ถังขยะของฉัน</span>
     </button>
   </div>
@@ -528,8 +576,8 @@
   </div>
 
   <!-- POPUP SYSTEM (full-screen popups) -->
-  <div id="popup-overlay" style="display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center;">
-    <div id="popup-container"></div>
+  <div id="popup-overlay" onclick="closePopup()" style="display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
+    <div id="popup-container" onclick="event.stopPropagation()"></div>
   </div>
 
   <!-- BOTTOM SHEET POPUP (สำหรับ alert functions) -->
@@ -739,6 +787,9 @@ async function openPopup(popupId) {
     }
   });
 
+  container.classList.remove('popup-bounce');
+  void container.offsetWidth; // ทริค (Reflow) เพื่อบังคับให้เบราว์เซอร์รีเซ็ตแอนิเมชันทันที
+  container.classList.add('popup-bounce');
   overlay.style.display = 'flex';
   try { window.updateAppHeight?.('popup.open'); } catch (_) {}
 }
@@ -746,6 +797,13 @@ async function openPopup(popupId) {
 function closePopup() {
   const overlay = document.getElementById('popup-overlay');
   overlay.style.display = 'none';
+
+  // เรียก cleanup ที่ popup ลงทะเบียนไว้
+  if (typeof window.__popupCleanup === 'function') {
+    window.__popupCleanup();
+    window.__popupCleanup = null;
+  }
+
   try { window.updateAppHeight?.('popup.close'); } catch (_) {}
 }
 </script>
@@ -883,24 +941,28 @@ function closePopup() {
   }
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script>
   const params = new URLSearchParams(window.location.search);
 
   // If come from dashboard or admin bin verify
   const redirect_mnbin = params.get("redirect_mnbin");
   const redirect_qrgen = params.get("redirect_qrgen");
+  const redirect_trsuccess = params.get("redirect_trsuccess");
   if (redirect_mnbin) {
-    openPopup('mnbin');
+    openMyBinMenu();
   }
   if (redirect_qrgen){
-    openPopup('qrgen');
+    openQrgen();
+  }
+  if (redirect_trsuccess){
+    openTrashSuccess();
   }
   const url = new URL(window.location);
   url.searchParams.delete("redirect_mnbin");
   url.searchParams.delete("redirect_qrgen");
+  url.searchParams.delete("redirect_trsuccess")
   window.history.replaceState({}, "", url);
-
-
 
   function openVerifyUserTrash() {
     window.open("ui/usrvfbin/usrvfbin.html", "_self");
@@ -908,6 +970,10 @@ function closePopup() {
 
   function  openMyBinMenu(){
     openPopup('mnbin');
+  }
+
+  function openQrgen(){
+    openPopup('qrgen');
   }
 
   function openLeaderboard(){
@@ -921,7 +987,58 @@ function closePopup() {
   function openBadge(){
     openPopup('badge');
   }
-</script>
 
+  function openTrashSuccess() {
+  openPopup('success');
+
+  // 1. เตรียมรูปทรงขยะ (เอามาแค่ไม่กี่อย่างเพื่อลดโหลด)
+  const trashShapes = [
+    confetti.shapeFromText({ text: '🍌', scalar: 3 }), // เปลือกกล้วย (ขยะเปียก/อินทรีย์) - ดูเรียลกว่าแอปเปิ้ลเยอะครับ
+    confetti.shapeFromText({ text: '🥤', scalar: 3 }), // แก้วน้ำพลาสติก (ขยะพลาสติก) - แทนขวดนม
+    confetti.shapeFromText({ text: '🥫', scalar: 3 }), // กระป๋องใช้แล้ว (ขยะรีไซเคิล/โลหะ)
+    confetti.shapeFromText({ text: '📦', scalar: 3 }), // กล่องกระดาษ (ขยะรีไซเคิล)
+    confetti.shapeFromText({ text: '📄', scalar: 3 })  // เศษกระดาษ
+  ];
+
+  const duration = 3 * 1000;
+  const animationEnd = Date.now() + duration;
+
+  (function frame() {
+    const timeLeft = animationEnd - Date.now();
+    if (timeLeft <= 0) return;
+
+    // ยิงจากฝั่งซ้าย (x: 0) และขวา (x: 1)
+    [0, 1].forEach((side) => {
+      // --- ส่วนที่ 1: เศษกระดาษธรรมดา (ยิงทุกเฟรม ตัวเล็ก ลื่นไหล) ---
+      confetti({
+        particleCount: 2,           // ยิงทีละนิดแต่ยิงถี่ๆ จะดูฟุ้งสวย
+        angle: side === 0 ? 60 : 120,
+        spread: 55,
+        origin: { x: side, y: 0.7 },
+        colors: ['#0ba06b', '#ffffff', '#f9a825'], // สีประจำแอป
+        scalar: 0.7,                // ขนาดเล็ก ประมวลผลเร็ว
+        zIndex: 1001
+      });
+
+      // --- ส่วนที่ 2: อีโมจิขยะ (สุ่มยิง นานๆ มาที เพื่อไม่ให้กระตุก) ---
+      if (Math.random() > 0.92) {   // มีโอกาสแค่ประมาณ 8% ในแต่ละเฟรมที่จะมีขยะออกมา
+        confetti({
+          particleCount: 1,         // ออกมาทีละ 1 ชิ้นพอ
+          angle: side === 0 ? 60 : 120,
+          spread: 40,
+          origin: { x: side, y: 0.7 },
+          shapes: [trashShapes[Math.floor(Math.random() * trashShapes.length)]],
+          scalar: 2.5,               // ตัวขยะให้ใหญ่หน่อยจะได้เห็นชัด
+          zIndex: 1001,
+          gravity: 1.2              // ขยะดูมีน้ำหนัก ตกเร็วกว่าเศษกระดาษนิดนึง
+        });
+      }
+    });
+
+    requestAnimationFrame(frame);
+  }());
+}
+
+</script>
 </body>
 </html>

@@ -1,0 +1,197 @@
+    <style>
+        /* ใส่ไว้ที่บรรทัดบนสุดของไฟล์ CSS หรือในแท็ก <style> */
+@import url("https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css");
+
+        /* ---------- ตัวแปรสีหลัก ---------- */
+        :root {
+            --color-background-primary: #ffffff;
+            --color-background-secondary: #f4f6f8;
+            --color-background-success: #e6f7e6;
+            --color-text-primary: #1e293b;
+            --color-text-secondary: #64748b;
+            --color-text-success: #15803d;
+            --color-border-tertiary: #e2e8f0;
+            --color-border-secondary: #cbd5e1;
+            --border-radius-lg: 16px;
+            --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #e5e7eb;  /* พื้นหลังจางๆ ให้เห็นการ์ดเด่น */
+            font-family: var(--font-sans);
+        }
+
+        /* ---------- CSS ของการ์ด ---------- */
+        .reward-wrapper {
+            background: var(--color-background-secondary);
+            border-radius: var(--border-radius-lg);
+            padding: 0rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            background: var(--color-background-primary);
+            border: 0.5px solid var(--color-border-tertiary);
+            border-radius: 20px;
+            padding: 1.5rem 1.5rem 1.25rem;
+            max-width: 300px;
+            width: 100%;
+        }
+
+        .card__header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .card__icon-box {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--color-background-success);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .card__icon {
+            font-size: 18px;
+            color: var(--color-text-success);
+        }
+
+        .card__title {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--color-text-primary);
+        }
+
+        .card__subtitle {
+            margin: 0;
+            font-size: 12px;
+            color: var(--color-text-secondary);
+        }
+
+        .card__rewards {
+            border-top: 0.5px solid var(--color-border-tertiary);
+            padding-top: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .reward-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reward-item__label {
+            font-size: 13px;
+            color: var(--color-text-secondary);
+        }
+
+        .reward-item__value {
+            font-size: 13px;
+            color: var(--color-text-primary);
+        }
+
+        .card__total {
+            background: var(--color-background-success);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .card__total-label {
+            font-size: 13px;
+            color: var(--color-text-success);
+            font-weight: 500;
+        }
+
+        .card__total-value {
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--color-text-success);
+        }
+
+        .card__button {
+            width: 100%;
+            padding: 0.6rem;
+            background: var(--color-background-primary);
+            border: 0.5px solid var(--color-border-secondary);
+            border-radius: 10px;
+            font-size: 13px;
+            color: var(--color-text-primary);
+            cursor: pointer;
+            font-family: var(--font-sans);
+        }
+
+        .card__button:hover {
+            background: var(--color-background-secondary);
+        }
+    </style>
+    <div class="reward-wrapper">
+        <div class="card">
+            <!-- หัวการ์ด -->
+            <div class="card__header">
+                <div class="card__icon-box">
+                    <i class="ti ti-leaf card__icon" aria-hidden="true"></i>
+                </div>
+                <div>
+                    <p class="card__title">สำเร็จแล้ว!</p>
+                    <p class="card__subtitle">ครั้งที่ 2 ที่คุณสร้างการเปลี่ยนแปลง</p>
+                </div>
+            </div>
+
+            <!-- รายการ EXP -->
+            <div class="card__rewards">
+                <div class="reward-item">
+                    <span class="reward-item__label">พื้นฐาน</span>
+                    <span class="reward-item__value">+20 EXP</span>
+                </div>
+                <div class="reward-item">
+                    <span class="reward-item__label">สำรวจ</span>
+                    <span class="reward-item__value">+40 EXP</span>
+                </div>
+                <div class="reward-item">
+                    <span class="reward-item__label">คัดแยก</span>
+                    <span class="reward-item__value">+40 EXP</span>
+                </div>
+            </div>
+
+            <!-- รวมที่ได้รับ -->
+            <div class="card__total">
+                <span class="card__total-label">รวมที่ได้รับ</span>
+                <span class="card__total-value">100 EXP</span>
+            </div>
+
+            <!-- ปุ่ม -->
+            <button class="card__button" onclick="window.closePopup()">
+                รับทราบ
+            </button>
+        </div>
+    </div>
+<script>
+    (function(){
+
+    })();
+</script>
