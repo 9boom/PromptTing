@@ -697,6 +697,38 @@ function stopGeneralLoadingAnimation() {
   }
 
   /**
+   * alertInvaildQrWarning
+   * แจ้งเตือนกรณี QR Code ที่แสกนได้ไม่มีข้อมูลในระบบ (Unregistered QR)
+   */
+  function alertInvaildQrWarning() {
+    _showPopup({
+      iconColor: 'red',
+      iconHTML: `
+        <svg viewBox="0 0 24 24" fill="none" stroke="#E53935" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="15" y1="9" x2="9" y2="15"/>
+          <line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>`,
+      title: 'ไม่พบข้อมูลถังขยะ',
+      body: `ขออภัย QR Code นี้<b>ยังไม่ได้ลงทะเบียน</b>ในระบบ<br>
+             หรืออาจเป็นรหัสที่ไม่ถูกต้อง โปรดตรวจสอบและแสกนใหม่อีกครั้ง`,
+      buttons: [
+        {
+          label: 'แสกนใหม่อีกครั้ง',
+          style: 'primary',
+          action: () => { startScanner(); }
+        },
+        {
+          label: 'กลับเมนูหลัก',
+          style: 'secondary',
+          action: () => { window.location.href = 'https://promptting.web.app'; }
+        }
+      ]
+    });
+  }
+  
+  /**
    * alertTrashMismatchWarning
    * แจ้งว่าขยะไม่ถูกประเภทถัง
    */
@@ -976,8 +1008,22 @@ function stopGeneralLoadingAnimation() {
     goToPage('page-photo');
   }
 
-  function handleEndProcess(){
+  function handleEndProcess(countsOfTries, basePoint, explorationPoint, sortingPoint, totalPoint){
+    //TODO save to local storage
+    /**
+     * =========================
+     * Example test data
+     * =========================
+     * เปิดใช้เวลา test UI
+     */
 
+    localStorage.setItem("countsOfTries", 2000);
+    localStorage.setItem("basePoint", 20);
+    localStorage.setItem("explorationPoint", 40);
+    localStorage.setItem("sortingPoint", 40);
+    localStorage.setItem("totalPoint", 100);
+    window.location.replace("https://promptting.web.app?redirect_trsuccess=true");
+    
   }
 
   // alertLocationMismatchWarning()

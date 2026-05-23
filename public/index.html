@@ -421,6 +421,37 @@
 .popup-bounce {
   animation: fastBounceIn 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
+
+.bin-tooltip {
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Sarabun', 'Noto Sans Thai', sans-serif;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* ซ่อน chrome ของ Leaflet popup */
+.bin-tooltip .leaflet-popup-content-wrapper {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  color: #fff;  /* เพิ่มตรงนี้ */
+
+}
+.bin-tooltip .leaflet-popup-tip-container {
+  display: none;
+}
+.bin-tooltip .leaflet-popup-close-button {
+  display: none;
+}
+.bin-tooltip .leaflet-popup-content {
+  margin: 0;
+}
   </style>
 </head>
 <body>
@@ -594,6 +625,7 @@
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
 <script>
 // Map centered on Phuket town area (similar satellite view in screenshot)
 const map = L.map('map', {
@@ -603,6 +635,8 @@ const map = L.map('map', {
   attributionControl: true,
   dragging: true,
   touchZoom: true,
+  rotate: true,
+  touchRotate: true,
   scrollWheelZoom: false
 });
 
@@ -624,12 +658,364 @@ function makeBinIcon(binType) {
     iconAnchor: [imgW / 2, imgH]
   });
 }
+</script>
 
-// Place markers (positions approximate to match screenshot layout)
-L.marker([8.0108, 98.3278], { icon: makeBinIcon('normal') }).addTo(map);
-L.marker([8.0065, 98.3325], { icon: makeBinIcon('dangerous') }).addTo(map);
-L.marker([7.9995, 98.3252], { icon: makeBinIcon('organic') }).addTo(map);
-L.marker([7.9990, 98.3395], { icon: makeBinIcon('recycle') }).addTo(map);
+<script type="module">
+  import { checkRequirements } from './core/utils/check_requirements.js';
+  import {
+    forceGetLocation,
+    startGpsInterval,
+    stopGpsInterval,
+    isGeolocationSupported,
+    getGeolocationPermissionState,
+    classifyGeolocationError,
+  } from './core/gps/gps.js';
+
+  const PLAYER_FOCUS_ZOOM = 18;
+
+  let playerMarker = null;
+  let accuracyCircle = null;
+
+  let userInteracting = false;
+  let endInteractionTimer = null;
+  let pendingFocus = null;
+
+  function setUserInteracting(value) {
+    userInteracting = Boolean(value);
+  }
+
+  function scheduleInteractionEnd() {
+    if (endInteractionTimer) clearTimeout(endInteractionTimer);
+    endInteractionTimer = setTimeout(() => {
+      setUserInteracting(false);
+      if (pendingFocus) {
+        const { latlng, zoom } = pendingFocus;
+        pendingFocus = null;
+        focusOnPlayer(latlng, zoom);
+      }
+    }, 450);
+  }
+
+  function focusOnPlayer(latlng, zoom = PLAYER_FOCUS_ZOOM) {
+    if (!latlng) return;
+    map.flyTo(latlng, zoom, { animate: true, duration: 1.0 });
+  }
+
+  function ensurePlayerLayers() {
+    if (!playerMarker) {
+      playerMarker = L.marker([0, 0], {
+        icon: L.divIcon({
+          className: '',
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
+          html: `
+            <div style="
+              width:22px;height:22px;border-radius:50%;
+              background:#1976d2;
+              border:3px solid #ffffff;
+              box-shadow:0 6px 16px rgba(0,0,0,0.28);
+            "></div>
+          `,
+        }),
+        zIndexOffset: 9999,
+      }).addTo(map);
+    }
+
+    if (!accuracyCircle) {
+      accuracyCircle = L.circle([0, 0], {
+        radius: 0,
+        color: '#1976d2',
+        weight: 1,
+        fillColor: '#1976d2',
+        fillOpacity: 0.12,
+        interactive: false,
+      }).addTo(map);
+    }
+  }
+
+  function updatePlayerOnMap(pos) {
+    if (!pos || !Number.isFinite(pos.lat) || !Number.isFinite(pos.lng)) return;
+
+    ensurePlayerLayers();
+
+    const latlng = L.latLng(pos.lat, pos.lng);
+    playerMarker.setLatLng(latlng);
+
+    const acc = Math.max(0, Number(pos.accuracy) || 0);
+    accuracyCircle.setLatLng(latlng);
+    accuracyCircle.setRadius(acc);
+
+    if (userInteracting) {
+      pendingFocus = { latlng, zoom: PLAYER_FOCUS_ZOOM };
+      return;
+    }
+    focusOnPlayer(latlng, PLAYER_FOCUS_ZOOM);
+  }
+
+  // Detect user interactions (pan/zoom/rotate). If updating during interaction,
+  // we'll defer the auto-focus until the user stops.
+  ['movestart', 'zoomstart', 'dragstart', 'rotatestart'].forEach((evt) => {
+    map.on(evt, () => {
+      setUserInteracting(true);
+      if (endInteractionTimer) clearTimeout(endInteractionTimer);
+    });
+  });
+  ['moveend', 'zoomend', 'dragend', 'rotateend'].forEach((evt) => {
+    map.on(evt, () => scheduleInteractionEnd());
+  });
+
+  let gpsTrackingActive = false;
+
+  const unsupportedBrowserIcon = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="#EF6C00" stroke-width="1.8"
+         stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="14" rx="2"/>
+      <path d="M8 21h8"/>
+      <path d="M12 18v3"/>
+      <path d="M5 8h14"/>
+      <path d="M8 12h5"/>
+      <path d="M16 12h.01"/>
+      <path d="M6 3l15 18"/>
+    </svg>`;
+
+  function showGpsSheet(opts) {
+    if (typeof globalThis._showSheet === 'function') {
+      globalThis._showSheet(opts);
+    } else {
+      console.warn('GPS sheet UI not ready');
+    }
+  }
+
+  function getRequirementHelpText(requirements) {
+    if (requirements?.isInAppBrowser) {
+      return 'ดูเหมือนว่าคุณกำลังเปิดแอปของเราผ่านแอปอื่น เช่น LINE, Facebook หรือ Instagram ซึ่งมักบล็อกกล้อง, GPS หรือพื้นที่เก็บข้อมูลของเว็บ';
+    }
+    if (!requirements?.isCameraSupported) {
+      return 'เบราว์เซอร์นี้ไม่รองรับการใช้งานกล้อง หรือไม่ได้เปิดผ่าน HTTPS';
+    }
+    if (!requirements?.isGpsSupported) {
+      return 'เบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่ง GPS';
+    }
+    if (!requirements?.isLocalStorageSupported) {
+      return 'เบราว์เซอร์นี้บล็อกการเก็บข้อมูลในเครื่อง';
+    }
+    return 'เบราว์เซอร์นี้ไม่รองรับความสามารถที่จำเป็นสำหรับการใช้งานเว็บ';
+  }
+
+  function showUnsupportedRequirementsSheet(requirements) {
+    showGpsSheet({
+      iconColor: 'orange',
+      iconHTML: unsupportedBrowserIcon,
+      title: 'เบราว์เซอร์ไม่รองรับ',
+      body: `${getRequirementHelpText(requirements)}<br><br>
+             กรุณากดเมนู <b>เปิดในเบราว์เซอร์</b> หรือคัดลอกลิงก์นี้ไปเปิดในเบราเซอร์ภายนอก เช่น <b>Chrome / Safari</b> บนมือถือ`,
+      buttons: [
+        {
+          label: 'คัดลอกลิงก์',
+          style: 'primary',
+          keepOpen: true,
+          action: async () => {
+            try {
+              await navigator.clipboard.writeText(window.location.href);
+            } catch (err) {
+              console.warn('copy link failed:', err);
+            }
+          },
+        },
+      ],
+    });
+  }
+
+  const gpsIconPin = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="#1565C0" stroke-width="1.8"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 21s7-4.35 7-10a7 7 0 1 0-14 0c0 5.65 7 10 7 10z"/>
+      <circle cx="12" cy="11" r="2.5" fill="#1565C0" stroke="none"/>
+    </svg>`;
+
+  const gpsIconBlocked = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="#C62828" stroke-width="1.8"
+         stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <line x1="5" y1="5" x2="19" y2="19"/>
+      <path d="M12 7v5l3 2"/>
+    </svg>`;
+
+  const gpsIconOffline = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="#EF6C00" stroke-width="1.8"
+         stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 7v6l3 3"/>
+      <path d="M4.5 4.5l15 15" opacity="0.9"/>
+    </svg>`;
+
+  function showGpsConsentSheet() {
+    showGpsSheet({
+      iconColor: 'blue',
+      iconHTML: gpsIconPin,
+      title: 'ขอข้อมูลตำแหน่งของคุณ',
+      body: `แอปต้องการใช้ <b>GPS</b> เพื่อแสดงตำแหน่งของคุณบนแผนที่ และทำให้ระบบทำงานได้อย่างถูกต้อง<br><br>
+             กด <b>เปิดใช้ตำแหน่ง</b> เพื่อเริ่มใช้งาน`,
+      buttons: [
+        {
+          label: 'เปิดใช้ตำแหน่ง',
+          style: 'primary',
+          action: () => {
+            startGpsTrackingFromUserAction();
+          },
+        },
+      ],
+    });
+  }
+
+  function showGpsPermissionDeniedSheet() {
+    showGpsSheet({
+      iconColor: 'blue',
+      iconHTML: gpsIconBlocked,
+      title: 'ไม่ได้รับอนุญาตใช้ตำแหน่ง',
+      body: `คุณได้ <b>ปฏิเสธการเข้าถึงตำแหน่ง</b> ไว้ แอปจึงไม่สามารถใช้ GPS ได้<br><br>
+             กรุณาเปิดสิทธิ์ตำแหน่งในเมนู <b>การตั้งค่าเว็บไซต์</b> ของเบราว์เซอร์ แล้วกด<b>ลองอีกครั้ง</b>`,
+      buttons: [
+        {
+          label: 'ลองอีกครั้ง',
+          style: 'primary',
+          action: () => {
+            retryGpsAfterPermissionChange();
+          },
+        },
+      ],
+    });
+  }
+
+  function showGpsUnavailableSheet() {
+    showGpsSheet({
+      iconColor: 'blue',
+      iconHTML: gpsIconOffline,
+      title: 'เปิด GPS / บริการตำแหน่ง',
+      body: `ระบบไม่สามารถระบุตำแหน่งได้ อาจเป็นเพราะ<b>GPS ปิดอยู่</b> โหมดเครื่องบิน หรือสัญญาณรบกวน<br><br>
+             กรุณา<b>เปิดตำแหน่ง (Location)</b>ในการตั้งค่าอุปกรณ์ แล้วลองใหม่`,
+      buttons: [
+        {
+          label: 'ลองใหม่',
+          style: 'primary',
+          action: () => {
+            startGpsTrackingFromUserAction();
+          },
+        },
+      ],
+    });
+  }
+
+  function showGpsUnsupportedSheet() {
+    showGpsSheet({
+      iconColor: 'blue',
+      iconHTML: gpsIconBlocked,
+      title: 'เบราว์เซอร์ไม่รองรับ',
+      body: `อุปกรณ์หรือเบราว์เซอร์นี้<b>ไม่รองรับการระบุตำแหน่ง</b>`,
+      buttons: [{ label: 'ปิด', style: 'secondary', action: () => {} }],
+    });
+  }
+
+  function handleGpsFailure(err) {
+    console.error('GPS error:', err);
+    const kind = classifyGeolocationError(err);
+    if (kind === 'denied') {
+      showGpsPermissionDeniedSheet();
+    } else if (kind === 'unavailable' || kind === 'timeout') {
+      showGpsUnavailableSheet();
+    } else {
+      showGpsUnavailableSheet();
+    }
+  }
+
+  async function startGpsTrackingFromUserAction() {
+    if (!isGeolocationSupported()) {
+      showGpsUnsupportedSheet();
+      return;
+    }
+    try {
+      const pos = await forceGetLocation();
+      updatePlayerOnMap(pos);
+      if (!gpsTrackingActive) {
+        gpsTrackingActive = true;
+        startGpsInterval(
+          (p) => updatePlayerOnMap(p),
+          (e) => console.error('GPS interval error:', e)
+        );
+      }
+    } catch (err) {
+      handleGpsFailure(err);
+    }
+  }
+
+  async function retryGpsAfterPermissionChange() {
+    const state = await getGeolocationPermissionState();
+    if (state === 'denied') {
+      showGpsPermissionDeniedSheet();
+      return;
+    }
+    await startGpsTrackingFromUserAction();
+  }
+
+  async function initGpsWithConsentFlow() {
+    if (!isGeolocationSupported()) {
+      showGpsUnsupportedSheet();
+      return;
+    }
+
+    const perm = await getGeolocationPermissionState();
+
+    if (perm === 'denied') {
+      showGpsPermissionDeniedSheet();
+      return;
+    }
+
+    if (perm === 'granted') {
+      await startGpsTrackingFromUserAction();
+      return;
+    }
+
+    showGpsConsentSheet();
+  }
+
+  function attachGeolocationPermissionListener() {
+    (async () => {
+      try {
+        const { query } = navigator.permissions || {};
+        if (typeof query !== 'function') return;
+        const status = await query({ name: 'geolocation' });
+        const onPermChange = () => {
+          if (status.state === 'granted' && !gpsTrackingActive) {
+            startGpsTrackingFromUserAction();
+          }
+        };
+        if (typeof status.addEventListener === 'function') {
+          status.addEventListener('change', onPermChange);
+        } else {
+          status.onchange = onPermChange;
+        }
+      } catch (_) {}
+    })();
+  }
+
+  (async function initRequirementsGate() {
+    const requirements = await checkRequirements();
+    window.__appRequirements = requirements;
+
+    if (!requirements.canProceed) {
+      window.__requirementsBlocked = true;
+      showUnsupportedRequirementsSheet(requirements);
+      return;
+    }
+
+    window.__requirementsBlocked = false;
+    initGpsWithConsentFlow();
+    attachGeolocationPermissionListener();
+  })();
+
+  window.addEventListener('beforeunload', () => {
+    try { stopGpsInterval(); } catch (_) {}
+  });
 </script>
 
 <script>
@@ -759,7 +1145,7 @@ async function openPopup(popupId) {
   const container = document.getElementById('popup-container');
 
   if (!_popupCache[popupId]) {
-    const res = await fetch(`ui/popup/${popupId}/${popupId}.html`);
+    const res = await fetch(`https://promptting.web.app/ui/popup/${popupId}/${popupId}.html`);
     const html = await res.text();
     _popupCache[popupId] = html;
   }
@@ -815,6 +1201,7 @@ function closePopup() {
   const closeBtn   = document.getElementById('pwa-close-btn');
 
   window.addEventListener('beforeinstallprompt', (e) => {
+    if (window.__requirementsBlocked) return;
     e.preventDefault();
     deferredPrompt = e;
     setTimeout(() => { pwaBanner.style.display = 'block'; }, 2000);
@@ -883,7 +1270,7 @@ function closePopup() {
       el.className   = 'sheet-btn ' + (btn.style || 'primary');
       el.textContent = btn.label;
       el.onclick = () => {
-        _closeSheet();
+        if (!btn.keepOpen) _closeSheet();
         if (btn.action) btn.action();
       };
       btnStack.appendChild(el);
@@ -941,12 +1328,57 @@ function closePopup() {
   }
 </script>
 
+<script>
+  // Map ประเภทถัง → ชื่อภาษาไทย
+const BIN_LABELS = {
+  normal:    'ถังขยะทั่วไป',
+  recycle:   'ถังขยะรีไซเคิล',
+  organic:   'ถังขยะอินทรีย์',
+  dangerous: 'ถังขยะอันตราย',
+};
+
+let binMarkers = []; // เก็บ reference marker ไว้สำหรับ clear
+
+async function updateBinsMap() {
+  try {
+    const res = await fetch('http://10.0.2.150:8080/fetch_bins');
+    const bins = await res.json();
+
+    // สร้าง marker ใหม่ทั้งหมดก่อน
+    const newMarkers = bins.map(bin => {
+      const marker = L.marker([bin.binLat, bin.binLng], {
+        icon: makeBinIcon(bin.binType)
+      }).addTo(map);
+
+      const label = BIN_LABELS[bin.binType] ?? bin.binType;
+      marker.bindPopup(label, {
+        direction: 'top',
+        offset: [0, -80],
+        className: 'bin-tooltip'
+      });
+
+      return marker;
+    });
+
+    // พอมี marker ใหม่พร้อมแล้ว ค่อยลบอันเก่า (ไม่มี gap)
+    binMarkers.forEach(m => m.remove());
+    binMarkers = newMarkers;
+
+  } catch (err) {
+    console.error('fetch_bins error:', err);
+  }
+}
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script>
-  const params = new URLSearchParams(window.location.search);
 
-  // If come from dashboard or admin bin verify
-  const redirect_mnbin = params.get("redirect_mnbin");
+  // ตรวจสอบพารามิเตอร์เมื่อโหลดหน้า index.html
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.__requirementsBlocked) return;
+
+  const params = new URLSearchParams(window.location.search);
+    const redirect_mnbin = params.get("redirect_mnbin");
   const redirect_qrgen = params.get("redirect_qrgen");
   const redirect_trsuccess = params.get("redirect_trsuccess");
   if (redirect_mnbin) {
@@ -964,8 +1396,14 @@ function closePopup() {
   url.searchParams.delete("redirect_trsuccess")
   window.history.replaceState({}, "", url);
 
+  updateBinsMap();
+  setInterval(updateBinsMap, 10000); // refresh ทุก 60 วินาที
+
+});
+  
+
   function openVerifyUserTrash() {
-    window.open("ui/usrvfbin/usrvfbin.html", "_self");
+    window.location.replace("ui/usrvfbin/usrvfbin.html");
   }
 
   function  openMyBinMenu(){
